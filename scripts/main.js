@@ -1901,14 +1901,22 @@ document.addEventListener('DOMContentLoaded', () => {
     ].join('\n');
   }
 
-  /* Mostra o botão WhatsApp após pagamento confirmado */
+  /* Mostra o botão WhatsApp após pagamento confirmado e redireciona em 3s */
   function kdShowWaButtonPostPix(info) {
     const waBtn = document.getElementById('pixWaBtn');
     if (!waBtn) return;
-    const msg    = kdBuildWaMessagePostPix(info);
-    waBtn.href   = 'https://wa.me/393347381831?text=' + encodeURIComponent(msg);
+    const msg   = kdBuildWaMessagePostPix(info);
+    const waUrl = 'https://wa.me/393347381831?text=' + encodeURIComponent(msg);
+    waBtn.href  = waUrl;
     waBtn.style.display = '';
     waBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    // Atualiza badge de status para confirmado
+    const lang = localStorage.getItem('kd_lang') || 'pt';
+    kdUpdatePixBadge('paid', lang);
+
+    // Redirecionamento automático após 3 segundos
+    setTimeout(() => { window.location.href = waUrl; }, 3000);
   }
 
   /* Verifica status do pedido via API */

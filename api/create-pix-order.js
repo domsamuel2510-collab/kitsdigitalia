@@ -16,6 +16,35 @@
 const { createClient }              = require('@supabase/supabase-js');
 const { createPixCharge }           = require('./_misticpay');
 const { PRODUCT_CATALOG }           = require('./_catalog');
+const nodemailer                    = require('nodemailer');
+
+// Fire-and-forget: não bloqueia a resposta da API
+async function sendOrderEmail({ productName, amount, name, email, whatsapp, orderId }) {
+  const transporter = nodemailer.createTransport({
+    host:   process.env.SMTP_HOST,
+    port:   Number(process.env.SMTP_PORT) || 465,
+    secure: (Number(process.env.SMTP_PORT) || 465) === 465,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+  await transporter.sendMail({
+    from:    `"KitsDigitalia" <${process.env.SMTP_USER}>`,
+    to:      'pedidos@kitsdigitalia.com',
+    subject: 'Novo pedido - KitsDigitalia',
+    text: [
+      'Novo pedido recebido:',
+      '',
+      `Produto: ${productName}`,
+      `Valor: R$ ${amount}`,
+      `Cliente: ${name}`,
+      `Email: ${email}`,
+      `WhatsApp: ${whatsapp}`,
+      `Order ID: ${orderId}`,
+    ].join('\n'),
+  });
+}
 
 const EUR_TO_BRL = 5.99;
 
@@ -117,6 +146,16 @@ module.exports = async function handler(req, res) {
       console.error('[create-pix-order] DB insert:', dbErr.message);
       return res.status(500).json({ error: 'Erro no banco de dados', details: dbErr.message });
     }
+
+    // Email de notificação — fire-and-forget, não bloqueia o fluxo
+    sendOrderEmail({
+      productName: (productName || productId).trim(),
+      amount,
+      name:        name.trim(),
+      email:       email.trim().toLowerCase(),
+      whatsapp:    whatsapp.trim(),
+      orderId,
+    }).catch(err => console.error('[create-pix-order] email error:', err.message));
 
     // Chama a MisticPay
     let pix;
