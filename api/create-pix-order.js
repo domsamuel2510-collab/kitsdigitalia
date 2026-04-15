@@ -69,7 +69,30 @@ module.exports = async function handler(req, res) {
 
     console.log('[create-pix-order] request:', { productId, productName, amount, paymentMethod: 'pix', orderId });
 
-    const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+    // Validação defensiva das env vars do Supabase antes de chamar createClient
+    const supabaseUrl = (process.env.SUPABASE_URL || '').trim();
+    const supabaseKey = (process.env.SUPABASE_SERVICE_KEY || '').trim();
+    console.log('[create-pix-order] SUPABASE_URL present:', !!supabaseUrl,
+      '| length:', supabaseUrl.length,
+      '| starts with https:', supabaseUrl.startsWith('https://'));
+    console.log('[create-pix-order] SUPABASE_SERVICE_KEY present:', !!supabaseKey,
+      '| length:', supabaseKey.length);
+
+    if (!supabaseUrl || !supabaseUrl.startsWith('http')) {
+      console.error('[create-pix-order] SUPABASE_URL inválida:', JSON.stringify(supabaseUrl));
+      return res.status(500).json({
+        error:   'Configuração inválida no servidor',
+        details: 'SUPABASE_URL ausente ou inválida. Configure a env var na Vercel.',
+      });
+    }
+    if (!supabaseKey) {
+      return res.status(500).json({
+        error:   'Configuração inválida no servidor',
+        details: 'SUPABASE_SERVICE_KEY ausente. Configure a env var na Vercel.',
+      });
+    }
+
+    const db = createClient(supabaseUrl, supabaseKey);
 
     // Persiste pedido ANTES de chamar a MisticPay
     // Garante que o pedido existe no banco mesmo se o gateway falhar
