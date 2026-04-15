@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Área Restrita — KitsDigitalia</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔒</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../styles/main.css" />
+  <style>
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      padding: 2rem 1rem;
+    }
+
+    .login-wrap {
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .login-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .login-header__lock {
+      font-size: 2.5rem;
+      display: block;
+      margin-bottom: .75rem;
+    }
+
+    .login-header__title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--white);
+      margin-bottom: .35rem;
+    }
+
+    .login-header__sub {
+      font-size: .85rem;
+      color: var(--text-muted);
+    }
+
+    .login-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+    }
+
+    .login-card .form-group + .form-group {
+      margin-top: 1rem;
+    }
+
+    .login-card label {
+      display: block;
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: .4rem;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    .login-card input {
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .login-btn {
+      width: 100%;
+      justify-content: center;
+      margin-top: 1.5rem;
+      font-size: 1rem;
+      padding: .85rem;
+    }
+
+    .access-denied {
+      display: none;
+      margin-top: 1.25rem;
+      background: rgba(239,68,68,.1);
+      border: 1px solid rgba(239,68,68,.3);
+      border-radius: var(--radius);
+      padding: .85rem 1rem;
+      text-align: center;
+    }
+
+    .access-denied__icon {
+      font-size: 1.25rem;
+      display: block;
+      margin-bottom: .35rem;
+    }
+
+    .access-denied__title {
+      font-size: .95rem;
+      font-weight: 700;
+      color: #f87171;
+      margin-bottom: .2rem;
+    }
+
+    .access-denied__sub {
+      font-size: .8rem;
+      color: var(--text-muted);
+    }
+
+    .login-footer {
+      text-align: center;
+      margin-top: 1.5rem;
+      font-size: .78rem;
+      color: var(--text-muted);
+    }
+
+    .login-footer a {
+      color: var(--text-muted);
+      text-decoration: underline;
+      underline-offset: 2px;
+    }
+
+    .security-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .5rem;
+      margin-top: 2rem;
+      font-size: .72rem;
+      color: var(--text-muted);
+      opacity: .6;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-wrap">
+
+    <div class="login-header">
+      <span class="login-header__lock">🔒</span>
+      <div class="login-header__title">Área Restrita</div>
+      <div class="login-header__sub">Acesso exclusivo para administradores KitsDigitalia</div>
+    </div>
+
+    <div class="login-card">
+      <form id="loginForm" autocomplete="off">
+        <div class="form-group">
+          <label for="username">Usuário</label>
+          <input type="text" id="username" name="username"
+            placeholder="admin@kitsdigitalia.com"
+            autocomplete="off" required />
+        </div>
+        <div class="form-group">
+          <label for="password">Senha</label>
+          <input type="password" id="password" name="password"
+            placeholder="••••••••••••"
+            autocomplete="new-password" required />
+        </div>
+
+        <button type="submit" class="btn btn-primary login-btn">
+          Entrar no Painel
+        </button>
+
+        <div class="access-denied" id="accessDenied">
+          <span class="access-denied__icon">🚫</span>
+          <div class="access-denied__title">Acesso restrito</div>
+          <div class="access-denied__sub">Você não tem autorização para entrar.</div>
+        </div>
+      </form>
+    </div>
+
+    <div class="login-footer">
+      <a href="../index.html">← Voltar para o site</a>
+    </div>
+
+    <div class="security-bar">
+      🛡️ Conexão segura &nbsp;·&nbsp; Tentativas monitoradas &nbsp;·&nbsp; KitsDigitalia © 2025
+    </div>
+
+  </div>
+
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const btn = this.querySelector('button[type=submit]');
+      btn.disabled = true;
+      btn.textContent = '🔄 Verificando...';
+
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.textContent = 'Entrar no Painel';
+        document.getElementById('accessDenied').style.display = 'block';
+        document.getElementById('password').value = '';
+        document.getElementById('password').focus();
+      }, 1400);
+    });
+  </script>
+
+</body>
+</html>
