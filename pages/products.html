@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Produtos — KitsDigitalia</title>
+  <meta name="description" content="Explore o catálogo privado de ferramentas premium, streaming e serviços digitais da KitsDigitalia." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../styles/main.css" />
+</head>
+<body>
+
+<!-- ===== NAVBAR ===== -->
+<nav class="navbar">
+  <div class="container navbar__inner">
+    <a href="../index.html" class="navbar__logo">Kits<span>Digitalia</span></a>
+    <ul class="navbar__links">
+      <li><a href="../index.html" data-i18n="nav-home">Home</a></li>
+      <li><a href="products.html" class="active" data-i18n="nav-products">Products</a></li>
+      <li><a href="about.html" data-i18n="nav-about">About</a></li>
+      <li><a href="contact.html" data-i18n="nav-contact">Contact</a></li>
+    </ul>
+    <div class="navbar__cta" style="display:flex;align-items:center;gap:.75rem;">
+      <div class="lang-switcher" role="group" aria-label="Language selector">
+        <button class="lang-btn" data-lang="pt">PT</button>
+        <button class="lang-btn" data-lang="en">EN</button>
+        <button class="lang-btn" data-lang="it">IT</button>
+      </div>
+    </div>
+    <button class="hamburger" aria-label="Open menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+<div class="mobile-nav">
+  <div class="mobile-nav__panel">
+    <button class="mobile-nav__close">✕</button>
+    <ul class="mobile-nav__links">
+      <li><a href="../index.html" data-i18n="nav-home">Home</a></li>
+      <li><a href="products.html" data-i18n="nav-products">Products</a></li>
+      <li><a href="about.html" data-i18n="nav-about">About</a></li>
+      <li><a href="contact.html" data-i18n="nav-contact">Contact</a></li>
+    </ul>
+  </div>
+</div>
+
+<!-- ===== PAGE HERO ===== -->
+<section class="page-hero">
+  <div class="container">
+    <div class="hero__badge" data-i18n="prods-badge">🛒 Premium Digital Tools</div>
+    <h1><span data-i18n="prods-h1">All</span> <span class="accent" data-i18n="prods-h1-accent">Products</span></h1>
+    <p data-i18n="prods-sub">Find the perfect tool for your needs. AI, streaming, design — all at prices that make sense.</p>
+  </div>
+</section>
+
+<!-- ===== PRODUCTS ===== -->
+<section class="section">
+  <div class="container">
+
+    <!-- Urgency Bar -->
+    <div class="urgency-bar" data-i18n="prods-urgency">🔥 Acessos limitados hoje — alguns produtos esgotam rápido</div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+      <button class="filter-btn active" data-filter="all" data-i18n="filter-all">All Tools</button>
+      <button class="filter-btn" data-filter="ai" data-i18n="filter-ai">🤖 AI Tools</button>
+      <button class="filter-btn" data-filter="streaming" data-i18n="filter-streaming">🎬 Streaming</button>
+      <button class="filter-btn" data-filter="design" data-i18n="filter-design">🎨 Design</button>
+      <button class="filter-btn" data-filter="productivity" data-i18n="filter-productivity">📋 Productivity</button>
+      <button class="filter-btn" data-filter="social" data-i18n="filter-social">📱 Social</button>
+    </div>
+
+    <!-- ===== AI TOOLS ===== -->
+    <div id="ai" style="scroll-margin-top:90px;">
+      <h2 style="color:var(--white); margin-bottom:1.5rem; display:flex; align-items:center; gap:.5rem;">
+        🤖 <span data-i18n="cat-ai">AI Tools</span>
+      </h2>
+      <div id="aiProducts" class="products-grid" style="margin-bottom:3rem;"></div>
+    </div>
+
+    <!-- ===== STREAMING ===== -->
+    <div id="streaming" style="scroll-margin-top:90px;">
+      <h2 style="color:var(--white); margin-bottom:1.5rem; display:flex; align-items:center; gap:.5rem;">
+        🎬 <span data-i18n="cat-streaming">Streaming</span>
+      </h2>
+      <div id="streamingProducts" class="products-grid" style="margin-bottom:3rem;"></div>
+    </div>
+
+    <!-- ===== DESIGN TOOLS ===== -->
+    <div id="design" style="scroll-margin-top:90px;">
+      <h2 style="color:var(--white); margin-bottom:1.5rem; display:flex; align-items:center; gap:.5rem;">
+        🎨 <span data-i18n="cat-design">Design Tools</span>
+      </h2>
+      <div id="designProducts" class="products-grid" style="margin-bottom:3rem;"></div>
+    </div>
+
+    <!-- ===== PRODUCTIVITY ===== -->
+    <div id="productivity" style="scroll-margin-top:90px;">
+      <h2 style="color:var(--white); margin-bottom:1.5rem; display:flex; align-items:center; gap:.5rem;">
+        📋 <span data-i18n="cat-productivity">Productivity</span>
+      </h2>
+      <div id="productivityProducts" class="products-grid" style="margin-bottom:3rem;"></div>
+    </div>
+
+    <!-- ===== SOCIAL MEDIA ===== -->
+    <div id="social" style="scroll-margin-top:90px;">
+      <h2 style="color:var(--white); margin-bottom:1.5rem; display:flex; align-items:center; gap:.5rem;">
+        📱 <span data-i18n="cat-social">Social Media</span>
+      </h2>
+      <div id="socialProducts" class="products-grid" style="margin-bottom:3rem;"></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ===== CTA BANNER ===== -->
+<section class="section" style="background:var(--bg2);">
+  <div class="container">
+    <div class="cta-banner">
+      <h2 data-i18n="prods-cta-h2">Not Sure What to Get?</h2>
+      <p data-i18n="prods-cta-p">Send us a message and we'll help you find the best tools for your needs and budget.</p>
+      <a href="contact.html" class="btn btn-primary btn-lg" data-i18n="prods-cta-btn">Talk to Us →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer__grid">
+      <div class="footer__brand">
+        <a href="../index.html" class="navbar__logo">Kits<span>Digitalia</span></a>
+        <p data-i18n="footer-brand-desc">Your go-to platform for affordable access to the best digital tools on the internet.</p>
+      </div>
+      <div class="footer__col">
+        <h4 data-i18n="footer-col-products">Products</h4>
+        <ul>
+          <li><a href="#ai" data-i18n="footer-col-ai">AI Tools</a></li>
+          <li><a href="#streaming" data-i18n="footer-col-streaming">Streaming</a></li>
+          <li><a href="#design" data-i18n="footer-col-design">Design Tools</a></li>
+        </ul>
+      </div>
+      <div class="footer__col">
+        <h4 data-i18n="footer-col-company">Company</h4>
+        <ul>
+          <li><a href="about.html" data-i18n="footer-col-about">About Us</a></li>
+          <li><a href="contact.html" data-i18n="footer-col-contact">Contact</a></li>
+        </ul>
+      </div>
+      <div class="footer__col">
+        <h4 data-i18n="footer-col-support">Support</h4>
+        <ul>
+          <li><a href="contact.html" data-i18n="footer-col-help">Help Center</a></li>
+          <li><a href="contact.html" data-i18n="footer-col-whatsapp">WhatsApp</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer__bottom">
+      <p style="color:var(--text-muted);" data-i18n="footer-copyright">© 2025 KitsDigitalia. All rights reserved.</p>
+      <p style="color:var(--text-muted);" data-i18n="footer-made">Made with ❤️ to help you access more.</p>
+    </div>
+  </div>
+</footer>
+
+<script src="../scripts/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <script>if(localStorage.getItem('kd_isLoggedIn')!=='true')location.replace('../login.html');</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meus Pedidos — KitsDigitalia</title>
+  <meta name="description" content="Acompanhe o status dos seus pedidos KitsDigitalia." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../styles/main.css" />
+  <style>
+    /* ---- My Orders page styles ---- */
+    .orders-search-box {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      max-width: 520px;
+      margin: 0 auto 2.5rem;
+    }
+    .order-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      transition: border-color .2s;
+    }
+    .order-card:hover { border-color: rgba(255,109,0,.35); }
+    .order-card__header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: .75rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+    .order-card__id {
+      font-family: monospace;
+      font-size: .85rem;
+      color: var(--orange);
+      font-weight: 700;
+    }
+    .order-card__product { font-size: 1rem; font-weight: 600; color: var(--white); margin-bottom: .2rem; }
+    .order-card__amount  { font-size: .9rem; color: var(--text-muted); }
+    .order-card__grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: .75rem;
+      margin-bottom: 1rem;
+    }
+    .order-card__field-label { font-size: .73rem; color: var(--text-muted); margin-bottom: .2rem; text-transform: uppercase; letter-spacing: .04em; }
+    .order-card__field-value { font-size: .875rem; color: var(--text); font-weight: 500; }
+    .status-badge {
+      display: inline-block;
+      padding: .25rem .75rem;
+      border-radius: 999px;
+      font-size: .73rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .status-badge--pending        { background: rgba(255,109,0,.15); color: var(--orange); }
+    .status-badge--paid           { background: rgba(74,222,128,.15); color: #4ade80; }
+    .status-badge--in-progress    { background: rgba(96,165,250,.15); color: #60a5fa; }
+    .status-badge--delivered      { background: rgba(74,222,128,.2);  color: #4ade80; }
+    .status-badge--completed      { background: rgba(74,222,128,.25); color: #22c55e; }
+    .status-badge--failed         { background: rgba(239,68,68,.15);  color: #f87171; }
+    .status-badge--expired        { background: rgba(239,68,68,.1);   color: #f87171; }
+    .order-card__actions { display: flex; gap: .6rem; flex-wrap: wrap; }
+    #ordersError { color: #f87171; font-size: .875rem; text-align: center; margin-top: .5rem; }
+    #noOrdersMsg { text-align: center; color: var(--text-muted); padding: 2.5rem 0; }
+  </style>
+</head>
+<body>
+
+<!-- ===== NAVBAR ===== -->
+<nav class="navbar">
+  <div class="container navbar__inner">
+    <a href="../index.html" class="navbar__logo">Kits<span>Digitalia</span></a>
+    <ul class="navbar__links">
+      <li><a href="../index.html" data-i18n="nav-home">Home</a></li>
+      <li><a href="products.html" data-i18n="nav-products">Products</a></li>
+      <li><a href="about.html" data-i18n="nav-about">About</a></li>
+      <li><a href="contact.html" data-i18n="nav-contact">Contact</a></li>
+    </ul>
+    <div class="navbar__cta" style="display:flex;align-items:center;gap:.75rem;">
+      <div class="lang-switcher" role="group" aria-label="Language selector">
+        <button class="lang-btn" data-lang="pt">PT</button>
+        <button class="lang-btn" data-lang="en">EN</button>
+        <button class="lang-btn" data-lang="it">IT</button>
+      </div>
+      <a href="checkout.html" class="btn btn-primary btn-sm" data-i18n="nav-products">← Produtos</a>
+    </div>
+    <button class="hamburger" aria-label="Open menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+<div class="mobile-nav">
+  <div class="mobile-nav__panel">
+    <button class="mobile-nav__close">✕</button>
+    <ul class="mobile-nav__links">
+      <li><a href="../index.html" data-i18n="nav-home">Home</a></li>
+      <li><a href="products.html" data-i18n="nav-products">Products</a></li>
+      <li><a href="about.html" data-i18n="nav-about">About</a></li>
+      <li><a href="contact.html" data-i18n="nav-contact">Contact</a></li>
+    </ul>
+  </div>
+</div>
+
+<!-- ===== PAGE HEADER ===== -->
+<section style="padding:2.5rem 0 1.5rem; border-bottom:1px solid var(--border);">
+  <div class="container">
+    <div class="breadcrumbs">
+      <a href="../index.html" data-i18n="nav-home">Home</a>
+      <span>›</span>
+      <span style="color:var(--text);" data-i18n="my-orders-title">Meus Pedidos</span>
+    </div>
+    <h1 style="font-size:2rem;">
+      📦 <span data-i18n="my-orders-title">Meus Pedidos</span>
+    </h1>
+    <p style="color:var(--text-muted);" data-i18n="my-orders-sub">Consulte o status dos seus pedidos.</p>
+  </div>
+</section>
+
+<!-- ===== CONTENT ===== -->
+<div class="container" style="padding-top:2.5rem;padding-bottom:3rem;">
+
+  <!-- Search form -->
+  <div class="orders-search-box">
+    <form id="ordersSearchForm">
+      <div class="form-group">
+        <label for="searchEmail" data-i18n="my-orders-email-label">Seu Email *</label>
+        <input type="email" id="searchEmail" name="email" required
+          placeholder="seu@email.com" autocomplete="email" />
+      </div>
+      <div class="form-group" style="margin-top:.85rem;">
+        <label for="searchWhatsapp" data-i18n="my-orders-wa-label">Seu WhatsApp *</label>
+        <input type="tel" id="searchWhatsapp" name="whatsapp" required
+          placeholder="+55 11 99999-9999" autocomplete="tel" />
+      </div>
+      <p style="font-size:.78rem;color:var(--text-muted);margin:.75rem 0 1rem;" id="ordersSearchHint">
+        <!-- hint adicionado via JS com base no idioma -->
+      </p>
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;" data-i18n="my-orders-search-btn" id="ordersSearchBtn">
+        🔍 Buscar Pedidos
+      </button>
+      <p id="ordersError" style="display:none;"></p>
+    </form>
+  </div>
+
+  <!-- Orders list (preenchido por JS) -->
+  <div id="ordersList" style="max-width:760px;margin:0 auto;display:none;">
+    <div id="noOrdersMsg" style="display:none;" data-i18n="my-orders-not-found">
+      Nenhum pedido encontrado.
+    </div>
+    <div id="ordersCards"></div>
+  </div>
+
+</div>
+
+<!-- ===== FOOTER ===== -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer__grid">
+      <div class="footer__brand">
+        <a href="../index.html" class="navbar__logo">Kits<span>Digitalia</span></a>
+        <p data-i18n="footer-brand-desc">Your go-to platform for affordable access to the best digital tools on the internet.</p>
+      </div>
+      <div class="footer__col">
+        <h4 data-i18n="footer-col-products">Products</h4>
+        <ul>
+          <li><a href="products.html#ai" data-i18n="footer-col-ai">AI Tools</a></li>
+          <li><a href="products.html#streaming" data-i18n="footer-col-streaming">Streaming</a></li>
+          <li><a href="products.html#design" data-i18n="footer-col-design">Design Tools</a></li>
+        </ul>
+      </div>
+      <div class="footer__col">
+        <h4 data-i18n="footer-col-company">Company</h4>
+        <ul>
+          <li><a href="about.html" data-i18n="footer-col-about">About Us</a></li>
+          <li><a href="contact.html" data-i18n="footer-col-contact">Contact</a></li>
+        </ul>
+      </div>
+      <div class="footer__col">
+        <h4 data-i18n="footer-col-support">Support</h4>
+        <ul>
+          <li><a href="contact.html" data-i18n="footer-col-help">Help Center</a></li>
+          <li><a href="contact.html" data-i18n="footer-col-whatsapp">WhatsApp</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer__bottom">
+      <p style="color:var(--text-muted);" data-i18n="footer-copyright">© 2025 KitsDigitalia. All rights reserved.</p>
+      <p style="color:var(--text-muted);" data-i18n="footer-made">Made with ❤️ to help you access more.</p>
+    </div>
+  </div>
+</footer>
+
+<script src="../scripts/main.js"></script>
+<script>
+/* ============================================================
+   My Orders — page logic
+   Identifica cliente por email + whatsapp (sem backend de auth)
+   ============================================================ */
+
+(function () {
+  const WA_NUMBER = '393347381831';
+
+  /* ── Helpers ─────────────────────────────────────────────── */
+
+  function getLang() {
+    return localStorage.getItem('kd_lang') || 'pt';
+  }
+
+  function t(key) {
+    const lang = getLang();
+    // i18n é definido pelo main.js carregado antes deste script
+    return (window.i18n && window.i18n[lang] && window.i18n[lang][key]) || key;
+  }
+
+  function formatDate(iso) {
+    if (!iso) return '—';
+    try {
+      return new Date(iso).toLocaleDateString(getLang() === 'it' ? 'it-IT' : getLang() === 'en' ? 'en-US' : 'pt-BR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+      });
+    } catch (_) { return iso.slice(0, 10); }
+  }
+
+  function formatCurrency(val, currency) {
+    if (!val) return '—';
+    if (currency === 'BRL') return 'R$ ' + Number(val).toFixed(2).replace('.', ',');
+    return '€' + Number(val).toFixed(2).replace('.', ',');
+  }
+
+  /* Mapeia payment_status para classe CSS */
+  function paymentStatusClass(s) {
+    const map = { paid: 'paid', failed: 'failed', expired: 'expired' };
+    return map[s] || 'pending';
+  }
+
+  /* Mapeia fulfillment_status para classe CSS */
+  function fulfillmentClass(s) {
+    const map = {
+      pago_ok:                'paid',
+      em_andamento:           'in-progress',
+      entregue:               'delivered',
+      concluido:              'completed',
+      aguardando_pagamento:   'pending',
+    };
+    return map[s] || 'pending';
+  }
+
+  /* Constrói mensagem WhatsApp de acompanhamento */
+  function buildWaMsg(order) {
+    return [
+      t('wa-pix-paid-greeting') || 'Olá, gostaria de verificar meu pedido.',
+      '',
+      (t('wa-pedido')  || 'Pedido')  + ': ' + order.order_id,
+      (t('wa-produto') || 'Produto') + ': ' + order.product_name,
+      (t('wa-valor')   || 'Valor')   + ': ' + formatCurrency(order.amount, order.currency),
+      (t('wa-pagamento')|| 'Pagamento') + ': ' + order.payment_method.toUpperCase(),
+    ].join('\n');
+  }
+
+  /* ── Renderização ────────────────────────────────────────── */
+
+  function renderOrders(orders) {
+    const listEl   = document.getElementById('ordersList');
+    const cardsEl  = document.getElementById('ordersCards');
+    const noOrders = document.getElementById('noOrdersMsg');
+
+    listEl.style.display   = '';
+    cardsEl.innerHTML      = '';
+    noOrders.style.display = 'none';
+
+    if (!orders || orders.length === 0) {
+      noOrders.style.display = '';
+      return;
+    }
+
+    orders.forEach(order => {
+      const pStatusKey = 'pstatus-' + (order.payment_status || 'pending');
+      const fStatusKey = 'status-'  + (order.fulfillment_status || 'aguardando_pagamento');
+      const pLabel     = t(pStatusKey);
+      const fLabel     = t(fStatusKey);
+      const pClass     = paymentStatusClass(order.payment_status);
+      const fClass     = fulfillmentClass(order.fulfillment_status);
+      const waMsg      = buildWaMsg(order);
+      const waUrl      = 'https://wa.me/' + WA_NUMBER + '?text=' + encodeURIComponent(waMsg);
+
+      const card = document.createElement('div');
+      card.className = 'order-card';
+      card.innerHTML = `
+        <div class="order-card__header">
+          <div>
+            <div class="order-card__id">${order.order_id}</div>
+            <div class="order-card__product">${order.product_name || '—'}</div>
+            <div class="order-card__amount">${formatCurrency(order.amount, order.currency)}</div>
+          </div>
+          <span class="status-badge status-badge--${fClass}">${fLabel}</span>
+        </div>
+        <div class="order-card__grid">
+          <div>
+            <div class="order-card__field-label">${t('my-orders-payment-method')}</div>
+            <div class="order-card__field-value">${(order.payment_method || '—').toUpperCase()}</div>
+          </div>
+          <div>
+            <div class="order-card__field-label">${t('my-orders-payment-status')}</div>
+            <div class="order-card__field-value">
+              <span class="status-badge status-badge--${pClass}">${pLabel}</span>
+            </div>
+          </div>
+          <div>
+            <div class="order-card__field-label">${t('my-orders-date')}</div>
+            <div class="order-card__field-value">${formatDate(order.created_at)}</div>
+          </div>
+        </div>
+        <div class="order-card__actions">
+          <a href="${waUrl}" target="_blank" class="btn btn-primary btn-sm">
+            ${t('my-orders-wa-btn')}
+          </a>
+          <button class="btn btn-outline btn-sm refresh-btn" data-order-id="${order.order_id}">
+            ${t('my-orders-refresh')}
+          </button>
+        </div>
+      `;
+      cardsEl.appendChild(card);
+    });
+
+    /* Botões de refresh individual */
+    cardsEl.querySelectorAll('.refresh-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const oid = btn.dataset.orderId;
+        const orig = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = '⏳';
+        try {
+          const resp = await fetch('/api/check-order-status?orderId=' + encodeURIComponent(oid));
+          if (resp.ok) {
+            const data = await resp.json();
+            /* Atualiza badges no card sem rerender tudo */
+            const card = btn.closest('.order-card');
+            if (card) {
+              const fKey  = 'status-'  + (data.fulfillmentStatus || 'aguardando_pagamento');
+              const pKey  = 'pstatus-' + (data.paymentStatus     || 'pending');
+              const fLbl  = t(fKey);
+              const pLbl  = t(pKey);
+              const fCls  = fulfillmentClass(data.fulfillmentStatus);
+              const pCls  = paymentStatusClass(data.paymentStatus);
+              const headerBadge = card.querySelector('.order-card__header .status-badge');
+              if (headerBadge) {
+                headerBadge.textContent = fLbl;
+                headerBadge.className   = 'status-badge status-badge--' + fCls;
+              }
+              const gridBadges = card.querySelectorAll('.order-card__grid .status-badge');
+              if (gridBadges[0]) {
+                gridBadges[0].textContent = pLbl;
+                gridBadges[0].className   = 'status-badge status-badge--' + pCls;
+              }
+            }
+          }
+        } catch (_) {}
+        btn.disabled    = false;
+        btn.textContent = orig;
+      });
+    });
+  }
+
+  /* ── Form submit ─────────────────────────────────────────── */
+
+  const form      = document.getElementById('ordersSearchForm');
+  const errorEl   = document.getElementById('ordersError');
+  const searchBtn = document.getElementById('ordersSearchBtn');
+
+  /* Pré-preenche se vier da sessão */
+  const savedEmail = localStorage.getItem('kd_orders_email');
+  const savedWa    = localStorage.getItem('kd_orders_wa');
+  if (savedEmail) document.getElementById('searchEmail').value    = savedEmail;
+  if (savedWa)    document.getElementById('searchWhatsapp').value = savedWa;
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    errorEl.style.display = 'none';
+
+    const email    = document.getElementById('searchEmail').value.trim();
+    const whatsapp = document.getElementById('searchWhatsapp').value.trim();
+
+    if (!email || !whatsapp) return;
+
+    /* Salva para próxima visita (conveniência — não é fonte de verdade) */
+    localStorage.setItem('kd_orders_email', email);
+    localStorage.setItem('kd_orders_wa',    whatsapp);
+
+    const orig = searchBtn.textContent;
+    searchBtn.disabled    = true;
+    searchBtn.textContent = '⏳';
+
+    try {
+      const resp = await fetch(
+        '/api/get-my-orders?email=' + encodeURIComponent(email) +
+        '&whatsapp=' + encodeURIComponent(whatsapp)
+      );
+      const data = await resp.json();
+
+      if (!resp.ok) throw new Error(data.error || 'Erro ao buscar pedidos.');
+
+      renderOrders(data.orders);
+    } catch (err) {
+      errorEl.textContent    = err.message || 'Erro ao buscar pedidos.';
+      errorEl.style.display  = '';
+    } finally {
+      searchBtn.disabled    = false;
+      searchBtn.textContent = orig;
+    }
+  });
+
+  /* Auto-busca se já tem dados salvos */
+  if (savedEmail && savedWa) {
+    form.dispatchEvent(new Event('submit'));
+  }
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contact — KitsDigitalia</title>
+  <meta name="description" content="Get in touch with KitsDigitalia. We're here to help via WhatsApp or email." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../styles/main.css" />
+  <style>
+    .contact-success {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 3rem 2rem;
+      gap: 1rem;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+    }
+    .contact-success-icon {
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      background: rgba(255,109,0,.15);
+      border: 2px solid var(--orange);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== NAVBAR ===== -->
+<nav class="navbar">
+  <div class="container navbar__inner">
+    <a href="../index.html" class="navbar__logo">Kits<span>Digitalia</span></a>
+    <ul class="navbar__links">
+      <li><a href="../index.html" data-i18n="nav-home">Home</a></li>
+      <li><a href="products.html" data-i18n="nav-products">Products</a></li>
+      <li><a href="about.html" data-i18n="nav-about">About</a></li>
+      <li><a href="contact.html" class="active" data-i18n="nav-contact">Contact</a></li>
+    </ul>
+    <div class="navbar__cta" style="display:flex;align-items:center;gap:.75rem;">
+      <div class="lang-switcher" role="group" aria-label="Language selector">
+        <button class="lang-btn" data-lang="pt">PT</button>
+        <button class="lang-btn" data-lang="en">EN</button>
+        <button class="lang-btn" data-lang="it">IT</button>
+      </div>
+    </div>
+    <button class="hamburger" aria-label="Open menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+<div class="mobile-nav">
+  <div class="mobile-nav__panel">
+    <button class="mobile-nav__close">✕</button>
+    <ul class="mobile-nav__links">
+      <li><a href="../index.html" data-i18n="nav-home">Home</a></li>
+      <li><a href="products.html" data-i18n="nav-products">Products</a></li>
+      <li><a href="about.html" data-i18n="nav-about">About</a></li>
+      <li><a href="contact.html" data-i18n="nav-contact">Contact</a></li>
+    </ul>
+  </div>
+</div>
+
+<!-- ===== PAGE HERO ===== -->
+<section class="page-hero">
+  <div class="container">
+    <div class="hero__badge" data-i18n="contact-badge">💬 We're Here to Help</div>
+    <h1><span data-i18n="contact-h1">Get in</span> <span class="accent" data-i18n="contact-h1-accent">Touch</span></h1>
+    <p data-i18n="contact-sub">Questions, support requests, or just want to say hello? We respond fast — usually within a few hours.</p>
+  </div>
+</section>
+
+<!-- ===== CONTACT LAYOUT ===== -->
+<section class="section">
+  <div class="container">
+    <div class="contact-layout">
+
+      <!-- LEFT: Contact Methods -->
+      <div>
+        <h2 style="color:var(--white);margin-bottom:1.5rem;" data-i18n="contact-reach-h2">Reach Us Directly</h2>
+
+        <div class="contact-info">
+
+          <!-- WhatsApp -->
+          <a href="https://wa.me/393347381831" target="_blank" class="contact-method" style="text-decoration:none;">
+            <div class="contact-method__icon">📱</div>
+            <div>
+              <h4 data-i18n="contact-wa-h4">WhatsApp</h4>
+              <p data-i18n="contact-wa-p">Fastest response — we're usually online during business hours. Send us a message anytime.</p>
+              <div style="display:inline-flex;align-items:center;gap:.4rem;margin-top:.5rem;color:var(--orange);font-weight:600;font-size:.875rem;" data-i18n="contact-wa-link">
+                Chat on WhatsApp →
+              </div>
+            </div>
+          </a>
+
+          <!-- Email -->
+          <a href="mailto:support@kitsdigitalia.com" class="contact-method" style="text-decoration:none;">
+            <div class="contact-method__icon">✉️</div>
+            <div>
+              <h4 data-i18n="contact-email-h4">Email</h4>
+              <p data-i18n="contact-email-p">Prefer email? Write to us and we'll get back to you within 24 hours on business days.</p>
+              <div style="display:inline-flex;align-items:center;gap:.4rem;margin-top:.5rem;color:var(--orange);font-weight:600;font-size:.875rem;">
+                support@kitsdigitalia.com
+              </div>
+            </div>
+          </a>
+
+          <!-- Instagram -->
+          <div class="contact-method">
+            <div class="contact-method__icon">📸</div>
+            <div>
+              <h4 data-i18n="contact-ig-h4">Instagram</h4>
+              <p data-i18n="contact-ig-p">Follow us for updates, tips, and promotions on our products.</p>
+              <div style="display:inline-flex;align-items:center;gap:.4rem;margin-top:.5rem;color:var(--orange);font-weight:600;font-size:.875rem;">
+                @kitsdigitalia
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Response time info -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;margin-top:1.5rem;">
+          <h4 style="color:var(--white);margin-bottom:.75rem;" data-i18n="contact-rt-h4">⏱️ Response Times</h4>
+          <div style="display:flex;flex-direction:column;gap:.5rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:.875rem;">
+              <span style="color:var(--text-muted);">📱 WhatsApp</span>
+              <span style="color:#4ade80;font-weight:600;" data-i18n="contact-rt-wa">Under 2 hours</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:.875rem;">
+              <span style="color:var(--text-muted);">✉️ Email</span>
+              <span style="color:#fbbf24;font-weight:600;" data-i18n="contact-rt-email">Under 24 hours</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:.875rem;">
+              <span style="color:var(--text-muted);">🚨 Urgent issues</span>
+              <span style="color:#4ade80;font-weight:600;" data-i18n="contact-rt-urgent">Priority response</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT: Contact Form -->
+      <div>
+        <!-- Success State -->
+        <div id="contactSuccess" class="contact-success">
+          <div class="contact-success-icon">✅</div>
+          <h3 style="color:var(--white);" data-i18n="contact-success-h3">Message Sent!</h3>
+          <p data-i18n="contact-success-p">Thanks for reaching out. We'll get back to you shortly — usually within a few hours.</p>
+          <a href="../index.html" class="btn btn-primary" data-i18n="contact-success-btn">Back to Home</a>
+        </div>
+
+        <!-- Contact Form -->
+        <form id="contactForm" class="checkout-form">
+          <h3 style="color:var(--white);margin-bottom:1.5rem;font-size:1.1rem;" data-i18n="contact-form-h3">
+            Send Us a Message
+          </h3>
+
+          <div class="form-group">
+            <label for="contactName" data-i18n="contact-name-label">Your Name *</label>
+            <input type="text" id="contactName" name="name" placeholder="Your full name" data-i18n-placeholder="contact-name-ph" required />
+          </div>
+
+          <div class="form-group">
+            <label for="contactEmail" data-i18n="contact-email-label">Email Address *</label>
+            <input type="email" id="contactEmail" name="email" data-i18n-placeholder="contact-email-ph" placeholder="your@email.com" required />
+          </div>
+
+          <div class="form-group">
+            <label for="contactPhone" data-i18n="contact-phone-label">WhatsApp / Phone (optional)</label>
+            <input type="tel" id="contactPhone" name="phone" data-i18n-placeholder="contact-phone-ph" placeholder="+1 234 567 8900" />
+          </div>
+
+          <div class="form-group">
+            <label for="subject" data-i18n="contact-subject-label">Subject</label>
+            <select id="subject" name="subject">
+              <option value="support" data-i18n="contact-opt-support">I need support with an order</option>
+              <option value="question" data-i18n="contact-opt-question">I have a question about a product</option>
+              <option value="purchase" data-i18n="contact-opt-purchase">I want to make a purchase</option>
+              <option value="refund" data-i18n="contact-opt-refund">I have an issue / refund request</option>
+              <option value="other" data-i18n="contact-opt-other">Other</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="message" data-i18n="contact-msg-label">Message *</label>
+            <textarea
+              id="message"
+              name="message"
+              rows="5"
+              placeholder="Tell us what you need. The more details, the faster we can help you."
+              data-i18n-placeholder="contact-msg-ph"
+              required
+              style="resize:vertical;"
+            ></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg" style="width:100%;justify-content:center;" data-i18n="contact-submit-btn">
+            Send Message →
+          </button>
+
+          <p style="text-align:center;font-size:.8rem;margin-top:1rem;color:var(--text-muted);" data-i18n="contact-privacy">
+            We respect your privacy. Your information will only be used to respond to your message.
+          </p>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ===== FAQ ===== -->
+<section class="section" style="background:var(--bg2);">
+  <div class="container">
+    <div class="section-header">
+      <h2><span data-i18n="contact-faq-h2">Quick</span> <span class="accent" data-i18n="contact-faq-accent">Answers</span></h2>
+      <p data-i18n="contact-faq-sub">Most questions are answered here. Save time and check before sending a message!</p>
+    </div>
+    <div class="faq" style="max-width:720px;margin:0 auto;">
+      <div class="faq-item">
+        <button class="faq-question">
+          <span data-i18n="contact-faq1-q">How long does it take to receive my access?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer" data-i18n="contact-faq1-a">After payment is confirmed, most orders are fulfilled within 30 minutes to 2 hours. In some cases it can be faster. We'll send everything straight to your email.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">
+          <span data-i18n="contact-faq2-q">My access stopped working. What do I do?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer" data-i18n="contact-faq2-a">Contact us immediately via WhatsApp or email and we'll replace your access right away. This is covered by our guarantee at no extra cost.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">
+          <span data-i18n="contact-faq3-q">Can I get access to multiple tools at once?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer" data-i18n="contact-faq3-a">Absolutely! You can order as many tools as you like. Many of our customers run ChatGPT Plus, Canva Pro, and Netflix together for a complete digital toolkit.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">
+          <span data-i18n="contact-faq4-q">What payment methods do you accept?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer" data-i18n="contact-faq4-a">We accept credit/debit cards, PIX (for Brazilian customers), PayPal, cryptocurrency, and bank transfer. We'll confirm the available options when you place your order.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">
+          <span data-i18n="contact-faq5-q">Do you offer refunds?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer" data-i18n="contact-faq5-a">We guarantee access for the full period you purchased. If we can't deliver what we promised, we'll make it right. Contact us and we'll find a fair solution.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== RESELLER ===== -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <div class="hero__badge" data-i18n="reseller-badge">🤝 Programa de Revendedores</div>
+      <h2 style="margin-top:.75rem;">
+        <span data-i18n="reseller-h2">Seja nosso</span>
+        <span class="accent" data-i18n="reseller-h2-accent"> Revendedor</span>
+      </h2>
+      <p data-i18n="reseller-sub">Ganhe comissões indicando novos clientes. Simples, rápido e sem investimento inicial.</p>
+    </div>
+    <div style="max-width:480px;margin:0 auto;">
+      <form id="resellerForm" class="checkout-form">
+        <div class="form-group">
+          <label for="resellerName" data-i18n="reseller-name-label">Nome completo</label>
+          <input type="text" id="resellerName" name="name"
+                 data-i18n-placeholder="reseller-name-ph"
+                 placeholder="João Silva" required />
+        </div>
+        <div class="form-group">
+          <label for="resellerCpf" data-i18n="reseller-cpf-label">CPF</label>
+          <input type="text" id="resellerCpf" name="cpf"
+                 data-i18n-placeholder="reseller-cpf-ph"
+                 placeholder="000.000.000-00" required />
+        </div>
+        <div class="form-group">
+          <label for="resellerPhone" data-i18n="reseller-phone-label">Telefone</label>
+          <input type="tel" id="resellerPhone" name="phone"
+                 data-i18n-placeholder="reseller-phone-ph"
+                 placeholder="+55 11 99999-9999" required />
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg"
+                style="width:100%;justify-content:center;"
+                data-i18n="reseller-btn">
+          Quero ser revendedor →
+        </button>
+        <p style="text-align:center;font-size:.8rem;margin-top:1rem;color:var(--text-muted);"
+           data-i18n="reseller-privacy">
+          Suas informações são usadas apenas para cadastro no programa de revendedores.
+        </p>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CTA ===== -->
+<section class="section" style="background:var(--bg2);">
+  <div class="container">
+    <div class="cta-banner">
+      <h2 data-i18n="contact-cta-h2">Ready to Get Your Tools?</h2>
+      <p data-i18n="contact-cta-p">Don't wait — start saving today and unlock the digital tools that will change how you work.</p>
+      <a href="products.html" class="btn btn-primary btn-lg" data-i18n="contact-cta-btn">Browse All Products →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer__grid">
+      <div class="footer__brand">
+        <a href="../index.html" class="navbar__logo">Kits<span>Digitalia</span></a>
+        <p data-i18n="footer-brand-desc">Your go-to platform for affordable access to the best digital tools on the internet.</p>
+      </div>
+      <div class="footer__col">
+        <h4 data-i18n="footer-col-products">Products</h4>
+        <ul>
+          <li><a href="products.html#ai" data-i18n="footer-col-ai">AI Tools</a></li>
+          <li><a href="products.html#streaming" data-i18n="footer-col-streaming">Streaming</a></li>
+          <li><a href="products.html#design" data-i18n="footer-col-design">Design Tools</a></li>
+        </ul>
+      </div>
+      <div class="footer__col">
+        <h4 data-i18n="footer-col-company">Company</h4>
+        <ul>
+          <li><a href="about.html" data-i18n="footer-col-about">About Us</a></li>
+          <li><a href="contact.html" data-i18n="footer-col-contact">Contact</a></li>
+        </ul>
+      </div>
+      <div class="footer__col">
+        <h4 data-i18n="footer-col-support">Support</h4>
+        <ul>
+          <li><a href="contact.html" data-i18n="footer-col-help">Help Center</a></li>
+          <li><a href="contact.html" data-i18n="footer-col-whatsapp">WhatsApp</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer__bottom">
+      <p style="color:var(--text-muted);" data-i18n="footer-copyright">© 2025 KitsDigitalia. All rights reserved.</p>
+      <p style="color:var(--text-muted);" data-i18n="footer-made">Made with ❤️ to help you access more.</p>
+    </div>
+  </div>
+</footer>
+
+<script src="../scripts/main.js"></script>
+</body>
+</html>
