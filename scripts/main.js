@@ -2044,10 +2044,13 @@ document.addEventListener('DOMContentLoaded', () => {
             headers: { 'Content-Type': 'application/json' },
             body:    JSON.stringify({ name, email, whatsapp, cpf, productId, productName, notes }),
           });
-          const data = await resp.json();
+          let data;
+          try { data = await resp.json(); } catch (_) { data = {}; }
 
           if (!resp.ok || !data.success) {
-            alert(data.details || data.error || 'Erro ao gerar PIX. Tente novamente.');
+            const msg = data.details || data.error || `Erro HTTP ${resp.status} ao gerar PIX.`;
+            console.error('[PIX] server error:', msg, data);
+            alert(msg);
             if (btn) { btn.disabled = false; btn.textContent = t['checkout-submit'] || '🚀 Finalizar pedido via WhatsApp'; }
             return;
           }
@@ -2066,8 +2069,8 @@ document.addEventListener('DOMContentLoaded', () => {
           });
 
         } catch (err) {
-          console.error('[PIX]', err);
-          alert('Erro ao gerar PIX. Verifique sua conexão e tente novamente.');
+          console.error('[PIX] fetch error:', err);
+          alert(err.message || 'Erro de conexão ao gerar PIX. Verifique sua conexão.');
         } finally {
           if (btn) { btn.disabled = false; btn.textContent = t['checkout-submit'] || '🚀 Finalizar pedido via WhatsApp'; }
         }

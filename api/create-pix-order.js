@@ -40,98 +40,104 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST')   return res.status(405).json({ error: 'Method not allowed' });
 
-  const { name, email, whatsapp, cpf, productId, productName, notes } = req.body || {};
-
-  // Validação de campos obrigatórios
-  if (!name || !email || !whatsapp || !cpf || !productId) {
-    return res.status(400).json({ error: 'Campos obrigatórios: name, email, whatsapp, cpf, productId.' });
-  }
-
-  // Validação de CPF (11 dígitos)
-  const cleanCpf = sanitizeCpf(cpf);
-  if (cleanCpf.length !== 11) {
-    return res.status(400).json({ error: 'CPF inválido. Informe os 11 dígitos numéricos.' });
-  }
-
-  // Valida produto e preço no servidor — nunca confiar no cliente
-  const item = PRODUCT_CATALOG[productId];
-  if (!item) {
-    return res.status(400).json({ error: 'Produto não encontrado.' });
-  }
-  if (item.soldOut) {
-    return res.status(400).json({ error: 'Produto esgotado. Escolha outro produto.' });
-  }
-
-  const priceEUR = item.price;
-  const amount   = Math.round(priceEUR * EUR_TO_BRL * 100) / 100;
-  const orderId = generateOrderId();
-
-  console.log('[create-pix-order] request:', { productId, productName, amount, paymentMethod: 'pix', orderId });
-
-  const db      = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
-
-  // Persiste pedido ANTES de chamar a MisticPay
-  // Garante que o pedido existe no banco mesmo se o gateway falhar
-  const { error: dbErr } = await db.from('orders').insert({
-    order_id:           orderId,
-    customer_name:      name.trim(),
-    customer_email:     email.trim().toLowerCase(),
-    customer_whatsapp:  whatsapp.trim(),
-    customer_cpf:       cleanCpf,
-    product_id:         productId,
-    product_name:       (productName || productId).trim(),
-    amount,
-    payment_method:     'pix',
-    payment_provider:   'misticpay',
-    payment_status:     'pending',
-    fulfillment_status: 'aguardando_pagamento',
-    currency:           'BRL',
-    notes:              notes ? notes.trim() : null,
-  });
-
-  if (dbErr) {
-    console.error('[create-pix-order] DB insert:', dbErr.message);
-    return res.status(500).json({ error: 'Erro interno. Tente novamente.' });
-  }
-
-  // Chama a MisticPay
-  let pix;
   try {
-    console.log('[create-pix-order] calling createPixCharge:', { orderId, amount, name: name.trim() });
-    pix = await createPixCharge({
-      orderId,
+    const { name, email, whatsapp, cpf, productId, productName, notes } = req.body || {};
+
+    // Validação de campos obrigatórios
+    if (!name || !email || !whatsapp || !cpf || !productId) {
+      return res.status(400).json({ error: 'Campos obrigatórios: name, email, whatsapp, cpf, productId.' });
+    }
+
+    // Validação de CPF (11 dígitos)
+    const cleanCpf = sanitizeCpf(cpf);
+    if (cleanCpf.length !== 11) {
+      return res.status(400).json({ error: 'CPF inválido. Informe os 11 dígitos numéricos.' });
+    }
+
+    // Valida produto e preço no servidor — nunca confiar no cliente
+    const item = PRODUCT_CATALOG[productId];
+    if (!item) {
+      return res.status(400).json({ error: 'Produto não encontrado.' });
+    }
+    if (item.soldOut) {
+      return res.status(400).json({ error: 'Produto esgotado. Escolha outro produto.' });
+    }
+
+    const priceEUR = item.price;
+    const amount   = Math.round(priceEUR * EUR_TO_BRL * 100) / 100;
+    const orderId  = generateOrderId();
+
+    console.log('[create-pix-order] request:', { productId, productName, amount, paymentMethod: 'pix', orderId });
+
+    const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+
+    // Persiste pedido ANTES de chamar a MisticPay
+    // Garante que o pedido existe no banco mesmo se o gateway falhar
+    const { error: dbErr } = await db.from('orders').insert({
+      order_id:           orderId,
+      customer_name:      name.trim(),
+      customer_email:     email.trim().toLowerCase(),
+      customer_whatsapp:  whatsapp.trim(),
+      customer_cpf:       cleanCpf,
+      product_id:         productId,
+      product_name:       (productName || productId).trim(),
       amount,
-      name: name.trim(),
-      cpf:  cleanCpf,
+      payment_method:     'pix',
+      payment_provider:   'misticpay',
+      payment_status:     'pending',
+      fulfillment_status: 'aguardando_pagamento',
+      currency:           'BRL',
+      notes:              notes ? notes.trim() : null,
     });
-    console.log('[create-pix-order] createPixCharge response:', {
-      transactionId: pix.transactionId,
-      copyPaste:     pix.copyPaste ? pix.copyPaste.slice(0, 40) + '…' : '',
-      qrcodeUrl:     pix.qrcodeUrl,
-      qrCodeBase64:  pix.qrCodeBase64 ? '[base64 present]' : '[empty]',
+
+    if (dbErr) {
+      console.error('[create-pix-order] DB insert:', dbErr.message);
+      return res.status(500).json({ error: 'Erro no banco de dados', details: dbErr.message });
+    }
+
+    // Chama a MisticPay
+    let pix;
+    try {
+      console.log('[create-pix-order] calling createPixCharge:', { orderId, amount, name: name.trim() });
+      pix = await createPixCharge({
+        orderId,
+        amount,
+        name: name.trim(),
+        cpf:  cleanCpf,
+      });
+      console.log('[create-pix-order] createPixCharge response:', {
+        transactionId: pix.transactionId,
+        copyPaste:     pix.copyPaste ? pix.copyPaste.slice(0, 40) + '…' : '',
+        qrcodeUrl:     pix.qrcodeUrl,
+        qrCodeBase64:  pix.qrCodeBase64 ? '[base64 present]' : '[empty]',
+      });
+    } catch (err) {
+      console.error('[create-pix-order] MisticPay error:', err);
+      return res.status(502).json({
+        error:   'Erro ao gerar PIX',
+        details: err.message,
+      });
+    }
+
+    // Atualiza pedido com dados do provedor
+    await db.from('orders').update({
+      provider_transaction_id: pix.transactionId,
+      provider_status:         'pending',
+      pix_copy_paste:          pix.copyPaste,
+      pix_qrcode_url:          pix.qrcodeUrl,
+    }).eq('order_id', orderId);
+
+    return res.status(200).json({
+      success:      true,
+      orderId,
+      copyPaste:    pix.copyPaste,
+      qrcodeUrl:    pix.qrcodeUrl,
+      qrCodeBase64: pix.qrCodeBase64,
+      amount,
     });
-  } catch (err) {
-    console.error('[create-pix-order] MisticPay error:', err);
-    return res.status(502).json({
-      error:   'Erro ao gerar PIX',
-      details: err.message,
-    });
+
+  } catch (unexpectedErr) {
+    console.error('[create-pix-order] unhandled error:', unexpectedErr);
+    return res.status(500).json({ error: 'Erro inesperado no servidor', details: unexpectedErr.message });
   }
-
-  // Atualiza pedido com dados do provedor
-  await db.from('orders').update({
-    provider_transaction_id: pix.transactionId,
-    provider_status:         'pending',
-    pix_copy_paste:          pix.copyPaste,
-    pix_qrcode_url:          pix.qrcodeUrl,
-  }).eq('order_id', orderId);
-
-  return res.status(200).json({
-    success:      true,
-    orderId,
-    copyPaste:    pix.copyPaste,
-    qrcodeUrl:    pix.qrcodeUrl,
-    qrCodeBase64: pix.qrCodeBase64,
-    amount,
-  });
 };
