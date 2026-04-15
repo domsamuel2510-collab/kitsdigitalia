@@ -65,6 +65,9 @@ module.exports = async function handler(req, res) {
   const priceEUR = item.price;
   const amount   = Math.round(priceEUR * EUR_TO_BRL * 100) / 100;
   const orderId = generateOrderId();
+
+  console.log('[create-pix-order] request:', { productId, productName, amount, paymentMethod: 'pix', orderId });
+
   const db      = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
   // Persiste pedido ANTES de chamar a MisticPay
@@ -94,17 +97,24 @@ module.exports = async function handler(req, res) {
   // Chama a MisticPay
   let pix;
   try {
+    console.log('[create-pix-order] calling createPixCharge:', { orderId, amount, name: name.trim() });
     pix = await createPixCharge({
       orderId,
       amount,
       name: name.trim(),
       cpf:  cleanCpf,
     });
+    console.log('[create-pix-order] createPixCharge response:', {
+      transactionId: pix.transactionId,
+      copyPaste:     pix.copyPaste ? pix.copyPaste.slice(0, 40) + '…' : '',
+      qrcodeUrl:     pix.qrcodeUrl,
+      qrCodeBase64:  pix.qrCodeBase64 ? '[base64 present]' : '[empty]',
+    });
   } catch (err) {
-    console.error('[create-pix-order] MisticPay:', err.message);
-    // Pedido já está no banco — cliente pode tentar de novo ou usar outro método
+    console.error('[create-pix-order] MisticPay error:', err);
     return res.status(502).json({
-      error: 'Erro ao gerar PIX. Tente novamente ou use IBAN/Binance.',
+      error:   'Erro ao gerar PIX',
+      details: err.message,
     });
   }
 

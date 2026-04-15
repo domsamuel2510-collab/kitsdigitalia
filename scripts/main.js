@@ -2047,7 +2047,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const data = await resp.json();
 
           if (!resp.ok || !data.success) {
-            alert(data.error || 'Erro ao gerar PIX. Tente novamente.');
+            alert(data.details || data.error || 'Erro ao gerar PIX. Tente novamente.');
             if (btn) { btn.disabled = false; btn.textContent = t['checkout-submit'] || '🚀 Finalizar pedido via WhatsApp'; }
             return;
           }

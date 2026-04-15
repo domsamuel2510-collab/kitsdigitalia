@@ -18,13 +18,20 @@ function authHeaders() {
 }
 
 async function mpPost(endpoint, body) {
+  console.log('[misticpay] POST', BASE_URL + endpoint);
+  console.log('[misticpay] body:', JSON.stringify(body));
+
   const res = await fetch(BASE_URL + endpoint, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body:    JSON.stringify(body),
   });
+
+  console.log('[misticpay] HTTP status:', res.status);
+
   if (!res.ok) {
     const text = await res.text();
+    console.error('[misticpay] error response:', text);
     throw new Error(`MisticPay ${endpoint} → ${res.status}: ${text}`);
   }
   return res.json();
