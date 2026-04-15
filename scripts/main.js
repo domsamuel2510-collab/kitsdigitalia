@@ -424,7 +424,7 @@ function renderProductDetailPage() {
       : lang === 'en'
       ? `Hello, I have a question about ${t.name}.`
       : `Olá, quero tirar uma dúvida sobre ${t.name}.`;
-    askBtn.href = 'https://wa.me/393347381831?text=' + encodeURIComponent(msg);
+    askBtn.href = 'https://wa.me/393716804204?text=' + encodeURIComponent(msg);
     askBtn.textContent = lang === 'it' ? '💬 Fai una domanda' : lang === 'en' ? '💬 Ask a Question' : '💬 Perguntar';
   }
 
@@ -1694,7 +1694,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* ---- Floating WhatsApp Button ---- */
   const waFloat = document.createElement('a');
-  waFloat.href = 'https://wa.me/393347381831';
+  waFloat.href = 'https://wa.me/393716804204';
   waFloat.target = '_blank';
   waFloat.rel = 'noopener noreferrer';
   waFloat.className = 'wa-float';
@@ -1906,7 +1906,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const waBtn = document.getElementById('pixWaBtn');
     if (!waBtn) return;
     const msg   = kdBuildWaMessagePostPix(info);
-    const waUrl = 'https://wa.me/393347381831?text=' + encodeURIComponent(msg);
+    const waUrl = 'https://wa.me/393716804204?text=' + encodeURIComponent(msg);
     waBtn.href  = waUrl;
     waBtn.style.display = '';
     waBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -2145,7 +2145,7 @@ document.addEventListener('DOMContentLoaded', () => {
           ].join('\n');
         }
 
-        const waUrl = 'https://wa.me/393347381831?text=' + encodeURIComponent(msg);
+        const waUrl = 'https://wa.me/393716804204?text=' + encodeURIComponent(msg);
         setTimeout(() => { window.location.href = waUrl; }, 650);
 
       } catch (err) {
@@ -2195,7 +2195,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       /* Redireciona para WhatsApp após pequeno delay */
-      const waUrl = 'https://wa.me/393347381831?text=' + encodeURIComponent(msg);
+      const waUrl = 'https://wa.me/393716804204?text=' + encodeURIComponent(msg);
       setTimeout(() => { window.location.href = waUrl; }, 650);
     });
   }
@@ -2232,7 +2232,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.textContent = '⏳ Redirecionando...';
       }
 
-      const waUrl = 'https://wa.me/393347381831?text=' + encodeURIComponent(msg);
+      const waUrl = 'https://wa.me/393716804204?text=' + encodeURIComponent(msg);
       setTimeout(() => { window.location.href = waUrl; }, 650);
     });
   }
