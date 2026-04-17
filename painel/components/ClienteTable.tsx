@@ -6,6 +6,7 @@ import { StatusBadge } from './StatusBadge';
 import { supabase } from '@/lib/supabase';
 import {
   fmtData, whatsappLink, diasSemContato, precisaAtencao, precisaRenovacaoMensal,
+  camposFaltantes,
 } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
@@ -14,6 +15,7 @@ interface Props {
   onRenovar:             (c: Cliente) => void;
   onNaoRenovar:          (c: Cliente) => void;
   onEditar:              (c: Cliente) => void;
+  onEditarComFoco?:      (c: Cliente, campo: 'email' | 'whatsapp') => void;
   onRegistrarResposta:   (c: Cliente) => void;
   onVerHistorico:        (c: Cliente) => void;
   onConfirmarAtivacao:   (c: Cliente) => void;
@@ -24,6 +26,7 @@ export function ClienteTable({
   onRenovar,
   onNaoRenovar,
   onEditar,
+  onEditarComFoco,
   onRegistrarResposta,
   onVerHistorico,
   onConfirmarAtivacao,
@@ -55,6 +58,7 @@ export function ClienteTable({
               onRenovar={onRenovar}
               onNaoRenovar={onNaoRenovar}
               onEditar={onEditar}
+              onEditarComFoco={onEditarComFoco}
               onRegistrarResposta={onRegistrarResposta}
               onVerHistorico={onVerHistorico}
               onConfirmarAtivacao={onConfirmarAtivacao}
@@ -70,21 +74,23 @@ export function ClienteTable({
 
 interface RowProps {
   cliente: Cliente;
-  onRenovar:           (c: Cliente) => void;
-  onNaoRenovar:        (c: Cliente) => void;
-  onEditar:            (c: Cliente) => void;
-  onRegistrarResposta: (c: Cliente) => void;
-  onVerHistorico:      (c: Cliente) => void;
-  onConfirmarAtivacao: (c: Cliente) => void;
+  onRenovar:            (c: Cliente) => void;
+  onNaoRenovar:         (c: Cliente) => void;
+  onEditar:             (c: Cliente) => void;
+  onEditarComFoco?:     (c: Cliente, campo: 'email' | 'whatsapp') => void;
+  onRegistrarResposta:  (c: Cliente) => void;
+  onVerHistorico:       (c: Cliente) => void;
+  onConfirmarAtivacao:  (c: Cliente) => void;
 }
 
 function ClienteRow({
   cliente: c,
-  onRenovar, onNaoRenovar, onEditar,
+  onRenovar, onNaoRenovar, onEditar, onEditarComFoco,
   onRegistrarResposta, onVerHistorico, onConfirmarAtivacao,
 }: RowProps) {
   const urgente      = precisaAtencao(c);
   const renovMensal  = precisaRenovacaoMensal(c);
+  const faltam       = camposFaltantes(c);
 
   // Edição inline de datas
   const [editCompra,    setEditCompra]    = useState(false);
@@ -176,6 +182,30 @@ function ClienteRow({
               <span className="mt-0.5 inline-flex items-center gap-1 text-xs font-medium text-blue-700 bg-blue-100 rounded px-1.5 py-0.5">
                 🔄 Renovar em {diasParaRenovacao(c.proxima_renovacao_mensal)}d
               </span>
+            )}
+
+            {/* Ícones de cadastro incompleto — clicáveis */}
+            {faltam.length > 0 && (
+              <div className="mt-0.5 flex items-center gap-1">
+                {faltam.includes('email') && (
+                  <button
+                    onClick={() => onEditarComFoco ? onEditarComFoco(c, 'email') : onEditar(c)}
+                    title="Email ausente — clique para preencher"
+                    className="inline-flex items-center gap-0.5 text-xs font-semibold text-red-600 bg-red-100 hover:bg-red-200 rounded px-1.5 py-0.5 transition-colors"
+                  >
+                    📧 sem email
+                  </button>
+                )}
+                {faltam.includes('whatsapp') && (
+                  <button
+                    onClick={() => onEditarComFoco ? onEditarComFoco(c, 'whatsapp') : onEditar(c)}
+                    title="WhatsApp ausente — clique para preencher"
+                    className="inline-flex items-center gap-0.5 text-xs font-semibold text-red-600 bg-red-100 hover:bg-red-200 rounded px-1.5 py-0.5 transition-colors"
+                  >
+                    📱 sem whatsapp
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>

@@ -14,6 +14,7 @@ import { ConfirmarAtivacaoModal } from '@/components/ConfirmarAtivacaoModal';
 import {
   ordenarPorUrgencia, precisaAtencao, normalizarClientes,
   precisaRenovacaoMensal, gerarMsgRenovacaoMensal, addDias, fmtData,
+  cadastroIncompleto, ordenarIncompletos,
 } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
@@ -32,6 +33,7 @@ const STATUS_LABELS: Record<string, string> = {
   vencido:        '🔴 Vencidos',
   renovado:       '🔵 Renovados',
   reabordagem:    '⚫ Reabordagem',
+  incompletos:    '📋 Incompletos',
 };
 
 // ---- Página principal ----
@@ -46,6 +48,7 @@ export default function Dashboard() {
   const [clienteRenovar,   setClienteRenovar]   = useState<Cliente | null>(null);
   const [clienteResposta,  setClienteResposta]  = useState<Cliente | null>(null);
   const [clienteEditar,    setClienteEditar]    = useState<Cliente | null>(null);
+  const [campoFocoEditar,  setCampoFocoEditar]  = useState<'email' | 'whatsapp' | undefined>();
   const [clienteHistorico, setClienteHistorico] = useState<Cliente | null>(null);
   const [clienteAtivacao,  setClienteAtivacao]  = useState<Cliente | null>(null);
 
@@ -135,22 +138,29 @@ export default function Dashboard() {
 
   // ---- Dados derivados ----
 
-  const precisamAtencao      = clientes.filter(precisaAtencao);
-  const ativacosPendentes    = clientes.filter(c => !c.ativacao_confirmada && c.status === 'ativo');
-  const renovacoesMensais    = clientes.filter(precisaRenovacaoMensal);
+  const precisamAtencao   = clientes.filter(precisaAtencao);
+  const ativacosPendentes = clientes.filter(c => !c.ativacao_confirmada && c.status === 'ativo');
+  const renovacoesMensais = clientes.filter(precisaRenovacaoMensal);
+  const incompletos       = clientes.filter(cadastroIncompleto);
 
-  const filtrados = ordenarPorUrgencia(
-    clientes.filter(c => {
-      const grupo      = FILTRO_GRUPOS[filtro];
-      const matchFiltro = filtro === 'todos' || (grupo ? grupo.includes(c.status) : c.status === filtro);
-      const matchBusca  = !busca ||
+  const filtrados = (() => {
+    const base = clientes.filter(c => {
+      const grupo       = FILTRO_GRUPOS[filtro];
+      const matchFiltro = filtro === 'todos'
+        || filtro === 'incompletos'
+        || (grupo ? grupo.includes(c.status) : c.status === filtro);
+      const matchIncompleto = filtro !== 'incompletos' || cadastroIncompleto(c);
+      const matchBusca = !busca ||
         c.nome.toLowerCase().includes(busca.toLowerCase()) ||
-        c.email.toLowerCase().includes(busca.toLowerCase()) ||
-        c.whatsapp.includes(busca) ||
+        (c.email  ?? '').toLowerCase().includes(busca.toLowerCase()) ||
+        (c.whatsapp ?? '').includes(busca) ||
         c.produto.toLowerCase().includes(busca.toLowerCase());
-      return matchFiltro && matchBusca;
-    })
-  );
+      return matchFiltro && matchIncompleto && matchBusca;
+    });
+    // Ordenação especial para filtro incompletos
+    if (filtro === 'incompletos') return ordenarIncompletos(base);
+    return ordenarPorUrgencia(base);
+  })();
 
   return (
     <>
@@ -201,6 +211,38 @@ export default function Dashboard() {
               ))}
             </div>
           </div>
+        )}
+
+        {/* 📋 Banner cadastros incompletos */}
+        {incompletos.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setFiltro(filtro === 'incompletos' ? 'todos' : 'incompletos')}
+            className={`w-full text-left rounded-xl border px-4 py-3 flex items-center gap-3 transition-colors ${
+              filtro === 'incompletos'
+                ? 'bg-orange-100 border-orange-400 ring-2 ring-orange-300'
+                : 'bg-orange-50 border-orange-200 hover:bg-orange-100'
+            }`}
+          >
+            <span className="text-lg">📋</span>
+            <div className="flex-1">
+              <span className="font-semibold text-orange-900 text-sm">
+                {incompletos.length} cliente{incompletos.length > 1 ? 's' : ''} com cadastro incompleto
+              </span>
+              <span className="ml-2 text-xs text-orange-700">
+                (email ou WhatsApp ausente)
+              </span>
+              {/* Prioridade: reabordagem incompletos */}
+              {incompletos.some(c => c.status === 'reabordagem') && (
+                <span className="ml-2 animate-pulse inline-flex items-center gap-1 text-xs font-bold text-red-700 bg-red-100 rounded px-1.5 py-0.5">
+                  ⚠️ Prioridade — reabordagem incompleta
+                </span>
+              )}
+            </div>
+            <span className="text-xs text-orange-600 font-medium shrink-0">
+              {filtro === 'incompletos' ? 'Limpar filtro ×' : 'Ver agora →'}
+            </span>
+          </button>
         )}
 
         {/* Header */}
@@ -257,7 +299,8 @@ export default function Dashboard() {
             onRenovar={setClienteRenovar}
             onNaoRenovar={marcarReabordagem}
             onRegistrarResposta={setClienteResposta}
-            onEditar={setClienteEditar}
+            onEditar={c => { setCampoFocoEditar(undefined); setClienteEditar(c); }}
+            onEditarComFoco={(c, campo) => { setCampoFocoEditar(campo); setClienteEditar(c); }}
             onVerHistorico={setClienteHistorico}
             onConfirmarAtivacao={setClienteAtivacao}
           />
@@ -328,7 +371,8 @@ export default function Dashboard() {
       {clienteEditar && (
         <EditarClienteModal
           cliente={clienteEditar}
-          onClose={() => setClienteEditar(null)}
+          campoFoco={campoFocoEditar}
+          onClose={() => { setClienteEditar(null); setCampoFocoEditar(undefined); }}
           onSaved={carregar}
         />
       )}

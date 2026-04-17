@@ -194,3 +194,28 @@ export function precisaAtencao(c: Cliente): boolean {
   }
   return false;
 }
+
+// ---- Cadastro incompleto ----
+
+/** True se email ou whatsapp estão ausentes/vazios */
+export function cadastroIncompleto(c: Cliente): boolean {
+  return !c.email?.trim() || !c.whatsapp?.trim();
+}
+
+/** Lista os campos ausentes de um cliente */
+export function camposFaltantes(c: Cliente): ('email' | 'whatsapp')[] {
+  const faltam: ('email' | 'whatsapp')[] = [];
+  if (!c.email?.trim())    faltam.push('email');
+  if (!c.whatsapp?.trim()) faltam.push('whatsapp');
+  return faltam;
+}
+
+/** Ordena clientes incompletos: reabordagem → vencido → demais */
+export function ordenarIncompletos(clientes: Cliente[]): Cliente[] {
+  const PRIO: Partial<Record<string, number>> = { reabordagem: 0, vencido: 1 };
+  return [...clientes].sort((a, b) => {
+    const pa = PRIO[a.status] ?? 2;
+    const pb = PRIO[b.status] ?? 2;
+    return pa - pb;
+  });
+}
