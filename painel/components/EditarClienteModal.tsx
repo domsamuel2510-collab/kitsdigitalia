@@ -113,8 +113,9 @@ export function EditarClienteModal({ cliente, onClose, onSaved }: Props) {
             </Field>
           </div>
 
-          {/* Plano — ocupa linha inteira */}
-          <Field label="Plano">
+          {/* Plano — div em vez de label para não ativar botão ao clicar no texto */}
+          <div>
+            <span className="block text-xs font-medium text-gray-600 mb-1">Plano</span>
             <div className="grid grid-cols-4 gap-2">
               {PLANOS.map(p => (
                 <button
@@ -122,18 +123,21 @@ export function EditarClienteModal({ cliente, onClose, onSaved }: Props) {
                   type="button"
                   onClick={() => set('plano', p.value)}
                   className={[
-                    'py-2 rounded-lg border text-xs font-medium transition-colors',
+                    'py-2.5 rounded-lg border text-xs font-semibold transition-colors',
                     form.plano === p.value
-                      ? 'bg-orange-500 border-orange-500 text-white'
-                      : 'border-gray-300 text-gray-600 hover:bg-gray-50',
+                      ? 'bg-orange-500 border-orange-500 text-white shadow-sm'
+                      : 'border-gray-300 text-gray-600 hover:bg-orange-50 hover:border-orange-300',
                   ].join(' ')}
                 >
                   {p.label.split(' ')[0]}
-                  <span className="block text-xs opacity-70">{p.dias}d</span>
+                  <span className="block font-normal opacity-70">{p.dias}d</span>
                 </button>
               ))}
             </div>
-          </Field>
+            <p className="mt-1.5 text-xs text-gray-500">
+              Vencimento em <strong>{diasDoPlano(form.plano)} dias</strong> a partir da data de compra
+            </p>
+          </div>
 
           {/* Datas — compra recalcula vencimento automaticamente */}
           <div className="grid grid-cols-2 gap-3">

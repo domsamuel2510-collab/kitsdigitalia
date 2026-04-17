@@ -108,8 +108,9 @@ export function AdicionarClienteModal({ onClose, onSaved }: Props) {
               </Field>
             </div>
 
-            {/* Plano com cálculo automático */}
-            <Field label="Plano">
+            {/* Plano com cálculo automático — div em vez de label para não ativar botão ao clicar no texto */}
+            <div>
+              <span className="block text-xs font-medium text-gray-600 mb-1">Plano</span>
               <div className="grid grid-cols-4 gap-2">
                 {PLANOS.map(p => (
                   <button
@@ -117,14 +118,14 @@ export function AdicionarClienteModal({ onClose, onSaved }: Props) {
                     type="button"
                     onClick={() => setPlanoSel(p.value)}
                     className={[
-                      'py-2 rounded-lg border text-xs font-medium transition-colors',
+                      'py-2.5 rounded-lg border text-xs font-semibold transition-colors',
                       planoSel === p.value
-                        ? 'bg-orange-500 border-orange-500 text-white'
-                        : 'border-gray-300 text-gray-600 hover:bg-gray-50',
+                        ? 'bg-orange-500 border-orange-500 text-white shadow-sm'
+                        : 'border-gray-300 text-gray-600 hover:bg-orange-50 hover:border-orange-300',
                     ].join(' ')}
                   >
                     {p.label.split(' ')[0]}
-                    <span className="block text-xs opacity-70">{p.dias}d</span>
+                    <span className="block font-normal opacity-70">{p.dias}d</span>
                   </button>
                 ))}
               </div>
@@ -133,7 +134,7 @@ export function AdicionarClienteModal({ onClose, onSaved }: Props) {
                   Vencimento em <strong>{planoAtual.dias} dias</strong> a partir de hoje
                 </p>
               )}
-            </Field>
+            </div>
 
             <Field label="Observações">
               <textarea value={form.observacoes} onChange={e => set('observacoes', e.target.value)}
