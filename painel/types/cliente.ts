@@ -35,5 +35,6 @@ export interface Cliente {
   tentativas_contato: number;
   ultima_tentativa: string | null;
   resposta_cliente: RespostaCliente | null;
+  proxima_renovacao_mensal: string | null; // só para planos trimestral/semestral/anual
   created_at: string;
 }

@@ -66,9 +66,13 @@ export function AdicionarClienteModal({ onClose, onSaved }: Props) {
         status:              'ativo',
         msg_confirmacao:     msg,
         tentativas_contato:  0,
-        ativacao_confirmada: form.ativacao_confirmada,
-        data_ativacao:       form.ativacao_confirmada ? form.data_ativacao : null,
-        observacoes:         form.observacoes.trim() || null,
+        ativacao_confirmada:      form.ativacao_confirmada,
+        data_ativacao:            form.ativacao_confirmada ? form.data_ativacao : null,
+        observacoes:              form.observacoes.trim() || null,
+        // Renovação mensal apenas para planos longos (técnica é sempre mensal)
+        proxima_renovacao_mensal: form.plano !== 'mensal'
+          ? addDias(form.data_compra, 30)
+          : null,
       })
       .select('id')
       .single();

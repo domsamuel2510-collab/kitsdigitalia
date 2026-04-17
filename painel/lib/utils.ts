@@ -97,7 +97,7 @@ export function gerarMsgConfirmacao(
   dataCompra: string,
   dataVencimento: string,
 ): string {
-  return `✅ Solicitação Recebida com Sucesso!\n📦 Produto: ${produto}\n✉️ Email: ${email}\n📅 Data do Pedido: ${fmtData(dataCompra)}\n⏳ Vencimento Previsto: ${fmtData(dataVencimento)}\n📲 WhatsApp: ${whatsapp}\n⚠️ A ativação pode levar até 24 horas.\n🔔 Você será notificado aqui no chat.`;
+  return `Olá, ${nome}! Tudo bem? 😊\n\n✅ Seu acesso ao ${produto} foi ativado com sucesso!\n\n📅 Data de início: ${fmtData(dataCompra)}\n⏳ Válido até: ${fmtData(dataVencimento)}\n✉️ Email cadastrado: ${email}\n\nQualquer dúvida é só chamar. Aproveite! 🚀`;
 }
 
 // ---- Mensagens de cobrança (contextuais) ----
@@ -109,27 +109,62 @@ export function gerarMsgCobranca(
   dataVencimento: string,
 ): string {
   if (dias === 0) {
-    return `🔴 Olá, ${nome}! Seu acesso ao ${produto} vence HOJE.\nBora renovar para não perder o acesso? Me chama aqui! 🔥`;
+    return `Olá, ${nome}! Tudo bem? 😊\n\nSeu acesso ao ${produto} expira HOJE (${fmtData(dataVencimento)})! ⚠️\n\nPara não ficar sem acesso, renova agora. Me chama aqui! 🔥`;
   }
   if (dias < 0) {
-    return `⚠️ Olá, ${nome}! Seu acesso ao ${produto} venceu há ${Math.abs(dias)} dia(s).\nAinda dá pra renovar — me chama aqui! 😊`;
+    return `Olá, ${nome}! Tudo bem? 😊\n\nNotei que seu acesso ao ${produto} expirou no dia ${fmtData(dataVencimento)}. 😕\n\nQue tal renovar e voltar a aproveitar? Me chama aqui! 🔥`;
   }
-  return `⚠️ Olá, ${nome}! Seu acesso ao ${produto} vence em ${dias} dia(s) (${fmtData(dataVencimento)}).\nPara renovar é só me chamar aqui! 😊`;
+  return `Olá, ${nome}! Tudo bem? 😊\n\nPassando para te lembrar que seu acesso ao ${produto} vai expirar em ${dias} dia${dias > 1 ? 's' : ''}, no dia ${fmtData(dataVencimento)}.\n\nBora renovar para não perder o acesso? Me chama aqui! 🔥`;
 }
 
 // ---- Mensagens de reabordagem ----
 
+/** Templates com placeholders {nome} e {produto} — usados pela página de reabordagem como default editável */
+export const MSG_TEMPLATE_REABORDAGEM_BRASIL =
+`Olá, {nome}! 🇧🇷
+
+Tudo bem? Tenho uma condição especial exclusiva para você renovar seu {produto}!
+
+Preço promocional disponível por tempo limitado. Quer aproveitar?
+Me chama aqui! 🔥`;
+
+export const MSG_TEMPLATE_REABORDAGEM_EXTERIOR =
+`Hey {nome}! 🌍
+
+Hope you're doing well! I have a special exclusive deal for you to renew your {produto}!
+
+Limited time promotional price available. Interested?
+Message me here! 🔥`;
+
 export function gerarMsgReabordagemBrasil(nome: string, produto: string): string {
-  return `🇧🇷 Olá, ${nome}! Temos uma oferta especial para você voltar.\nSeu ${produto} com condição exclusiva — me chama aqui! 🔥`;
+  return MSG_TEMPLATE_REABORDAGEM_BRASIL.replace(/{nome}/g, nome).replace(/{produto}/g, produto);
 }
 
 export function gerarMsgReabordagemExterior(nome: string, produto: string): string {
-  return `Hey ${nome}! We have a special deal for you to come back.\nYour ${produto} access with exclusive pricing — message me! 🔥`;
+  return MSG_TEMPLATE_REABORDAGEM_EXTERIOR.replace(/{nome}/g, nome).replace(/{produto}/g, produto);
 }
 
 // mantém compatibilidade com código antigo
 export function gerarMsgReabordagem(nome: string, produto: string): string {
   return gerarMsgReabordagemBrasil(nome, produto);
+}
+
+// ---- Renovação mensal (para planos longos) ----
+
+/** True se o cliente (plano != mensal) tem proxima_renovacao_mensal dentro de 2 dias ou no passado */
+export function precisaRenovacaoMensal(c: Cliente): boolean {
+  if (!c.proxima_renovacao_mensal || !c.plano || c.plano === 'mensal') return false;
+  const agora = new Date(); agora.setHours(0, 0, 0, 0);
+  const data  = new Date(c.proxima_renovacao_mensal + 'T00:00:00');
+  const diff  = Math.round((data.getTime() - agora.getTime()) / 86_400_000);
+  return diff <= 2;
+}
+
+/** Mensagem de lembrete de renovação mensal */
+export function gerarMsgRenovacaoMensal(c: Cliente): string {
+  const planoLabel = PLANOS.find(p => p.value === c.plano)?.label.split(' ')[0] ?? c.plano ?? '';
+  const dataFmt    = c.proxima_renovacao_mensal ? fmtData(c.proxima_renovacao_mensal) : '?';
+  return `🔔 Lembrete de Renovação Mensal\n\nCliente: ${c.nome}\nPlano: ${planoLabel} (pago adiantado)\nProduto: ${c.produto}\n\n⚠️ Atenção: Este cliente possui plano ${planoLabel} mas a renovação técnica é mensal.\nPróxima renovação: ${dataFmt}\n\nNão esqueça de renovar o acesso dele hoje! ✅`;
 }
 
 // ---- Ordenação por urgência ----

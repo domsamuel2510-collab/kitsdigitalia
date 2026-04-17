@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type { Cliente } from '@/types/cliente';
 import { StatusBadge } from './StatusBadge';
 import { supabase } from '@/lib/supabase';
-import { fmtData, whatsappLink, diasSemContato, precisaAtencao } from '@/lib/utils';
+import {
+  fmtData, whatsappLink, diasSemContato, precisaAtencao, precisaRenovacaoMensal,
+} from '@/lib/utils';
 import toast from 'react-hot-toast';
 
 interface Props {
@@ -64,7 +66,7 @@ export function ClienteTable({
   );
 }
 
-// ---- Row separada para isolar estado de edição inline ----
+// ---- Row separada para isolar estado ----
 
 interface RowProps {
   cliente: Cliente;
@@ -81,57 +83,56 @@ function ClienteRow({
   onRenovar, onNaoRenovar, onEditar,
   onRegistrarResposta, onVerHistorico, onConfirmarAtivacao,
 }: RowProps) {
-  const urgente = precisaAtencao(c);
+  const urgente      = precisaAtencao(c);
+  const renovMensal  = precisaRenovacaoMensal(c);
 
-  // Estado local para edição inline de datas
+  // Edição inline de datas
   const [editCompra,    setEditCompra]    = useState(false);
   const [editVenc,      setEditVenc]      = useState(false);
   const [dataCompra,    setDataCompra]    = useState(c.data_compra ?? '');
   const [dataVenc,      setDataVenc]      = useState(c.data_vencimento ?? '');
-
-  // Refs para evitar que onBlur dispare save depois de Enter/Escape já terem agido
   const skipBlurCompra = useRef(false);
   const skipBlurVenc   = useRef(false);
 
-  /** Valida formato YYYY-MM-DD e retorna true se OK */
+  // Dropdown de ações secundárias
+  const [dropAberto, setDropAberto] = useState(false);
+  const dropRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!dropAberto) return;
+    function fechar(e: MouseEvent) {
+      if (dropRef.current && !dropRef.current.contains(e.target as Node)) {
+        setDropAberto(false);
+      }
+    }
+    document.addEventListener('mousedown', fechar);
+    return () => document.removeEventListener('mousedown', fechar);
+  }, [dropAberto]);
+
   function dataValida(valor: string): boolean {
-    if (!valor) return false;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(valor)) return false;
-    const d = new Date(valor + 'T12:00:00Z');
-    return !isNaN(d.getTime());
+    if (!valor || !/^\d{4}-\d{2}-\d{2}$/.test(valor)) return false;
+    return !isNaN(new Date(valor + 'T12:00:00Z').getTime());
   }
 
   async function salvarData(campo: 'data_compra' | 'data_vencimento', valor: string) {
     const isCompra = campo === 'data_compra';
+    if (isCompra) setEditCompra(false); else setEditVenc(false);
 
-    // Fecha o modo edição primeiro para evitar flicker
-    if (isCompra) setEditCompra(false);
-    else          setEditVenc(false);
-
-    // Validação antes de enviar
     if (!dataValida(valor)) {
-      toast.error('Data inválida — use o formato correto');
+      toast.error('Data inválida');
       if (isCompra) setDataCompra(c.data_compra ?? '');
       else          setDataVenc(c.data_vencimento ?? '');
       return;
     }
-
-    // Não envia se o valor não mudou
     const original = isCompra ? c.data_compra : c.data_vencimento;
     if (valor === original) return;
 
     try {
-      const { error } = await supabase
-        .from('clientes')
-        .update({ [campo]: valor })
-        .eq('id', c.id);
-
+      const { error } = await supabase.from('clientes').update({ [campo]: valor }).eq('id', c.id);
       if (error) throw error;
       toast.success('Data atualizada');
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erro desconhecido';
-      toast.error('Erro ao salvar data: ' + msg);
-      // Reverte para o valor original em caso de falha
+      toast.error('Erro ao salvar data: ' + (err instanceof Error ? err.message : 'Erro'));
       if (isCompra) setDataCompra(c.data_compra ?? '');
       else          setDataVenc(c.data_vencimento ?? '');
     }
@@ -140,7 +141,7 @@ function ClienteRow({
   return (
     <tr className={`hover:bg-gray-50 transition-colors ${urgente ? 'bg-red-50/40' : ''}`}>
 
-      {/* Cliente — clicável para abrir drawer */}
+      {/* Cliente */}
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
           {urgente && (
@@ -159,7 +160,7 @@ function ClienteRow({
             </button>
             <div className="text-xs text-gray-400">{c.email}</div>
 
-            {/* Badge de ativação pendente + botão rápido */}
+            {/* Badge de ativação pendente */}
             {!c.ativacao_confirmada && (
               <button
                 onClick={() => onConfirmarAtivacao(c)}
@@ -168,6 +169,13 @@ function ClienteRow({
               >
                 ⚠️ Ativar conta
               </button>
+            )}
+
+            {/* Badge de renovação mensal pendente */}
+            {renovMensal && c.proxima_renovacao_mensal && (
+              <span className="mt-0.5 inline-flex items-center gap-1 text-xs font-medium text-blue-700 bg-blue-100 rounded px-1.5 py-0.5">
+                🔄 Renovar em {diasParaRenovacao(c.proxima_renovacao_mensal)}d
+              </span>
             )}
           </div>
         </div>
@@ -188,20 +196,12 @@ function ClienteRow({
             autoFocus
             onChange={e => setDataCompra(e.target.value)}
             onBlur={() => {
-              // Ignora blur se Enter ou Escape já trataram a ação
               if (skipBlurCompra.current) { skipBlurCompra.current = false; return; }
               salvarData('data_compra', dataCompra);
             }}
             onKeyDown={e => {
-              if (e.key === 'Enter') {
-                skipBlurCompra.current = true; // impede double-save no blur seguinte
-                salvarData('data_compra', dataCompra);
-              }
-              if (e.key === 'Escape') {
-                skipBlurCompra.current = true; // impede save indevido no blur seguinte
-                setDataCompra(c.data_compra ?? '');
-                setEditCompra(false);
-              }
+              if (e.key === 'Enter')  { skipBlurCompra.current = true; salvarData('data_compra', dataCompra); }
+              if (e.key === 'Escape') { skipBlurCompra.current = true; setDataCompra(c.data_compra ?? ''); setEditCompra(false); }
             }}
             className="w-32 text-xs border border-orange-400 rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-orange-400"
           />
@@ -212,9 +212,7 @@ function ClienteRow({
               onClick={() => setEditCompra(true)}
               className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-orange-500 transition-opacity text-xs"
               title="Editar data de compra"
-            >
-              📅
-            </button>
+            >📅</button>
           </span>
         )}
       </td>
@@ -232,15 +230,8 @@ function ClienteRow({
               salvarData('data_vencimento', dataVenc);
             }}
             onKeyDown={e => {
-              if (e.key === 'Enter') {
-                skipBlurVenc.current = true;
-                salvarData('data_vencimento', dataVenc);
-              }
-              if (e.key === 'Escape') {
-                skipBlurVenc.current = true;
-                setDataVenc(c.data_vencimento ?? '');
-                setEditVenc(false);
-              }
+              if (e.key === 'Enter')  { skipBlurVenc.current = true; salvarData('data_vencimento', dataVenc); }
+              if (e.key === 'Escape') { skipBlurVenc.current = true; setDataVenc(c.data_vencimento ?? ''); setEditVenc(false); }
             }}
             className="w-32 text-xs border border-orange-400 rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-orange-400"
           />
@@ -251,9 +242,7 @@ function ClienteRow({
               onClick={() => setEditVenc(true)}
               className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-orange-500 transition-opacity text-xs"
               title="Editar data de vencimento"
-            >
-              📅
-            </button>
+            >📅</button>
           </span>
         )}
       </td>
@@ -277,52 +266,110 @@ function ClienteRow({
         />
       </td>
 
-      {/* Ações */}
+      {/* Ações — primárias visíveis + secundárias no dropdown ⋮ */}
       <td className="px-4 py-3">
-        <div className="flex items-center justify-end gap-1 flex-wrap">
+        <div className="flex items-center justify-end gap-1">
+          {/* Ação primária: Renovar */}
           <button
             onClick={() => onRenovar(c)}
-            className="px-2.5 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded text-xs font-medium"
+            className="px-2.5 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-semibold transition-colors"
           >
-            Renovar
+            ✅ Renovar
           </button>
+
+          {/* Ação primária: WhatsApp */}
           <a
             href={whatsappLink(c.whatsapp)}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-2.5 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-xs font-medium"
+            className="px-2.5 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-semibold transition-colors"
           >
-            WhatsApp
+            💬
           </a>
-          <button
-            onClick={() => onRegistrarResposta(c)}
-            className="px-2.5 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded text-xs font-medium"
-            title="Registrar resposta"
-          >
-            📋
-          </button>
-          {c.status !== 'reabordagem' && (
+
+          {/* Dropdown de ações secundárias */}
+          <div ref={dropRef} className="relative">
             <button
-              onClick={() => onNaoRenovar(c)}
-              className="px-2.5 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-xs font-medium"
+              onClick={() => setDropAberto(p => !p)}
+              className={`px-2 py-1.5 rounded-lg text-xs font-bold transition-colors border ${
+                dropAberto
+                  ? 'bg-gray-200 border-gray-300 text-gray-800'
+                  : 'bg-gray-100 hover:bg-gray-200 border-gray-200 text-gray-600'
+              }`}
+              title="Mais ações"
             >
-              Não renovou
+              ⋮
             </button>
-          )}
-          <button
-            onClick={() => onEditar(c)}
-            className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded text-xs font-medium"
-            title="Editar todos os campos"
-          >
-            ✏️
-          </button>
+
+            {dropAberto && (
+              <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-xl border border-gray-100 z-20 py-1 overflow-hidden">
+                <DropItem onClick={() => { setDropAberto(false); onEditar(c); }}>
+                  ✏️ Editar
+                </DropItem>
+                <DropItem onClick={() => { setDropAberto(false); onVerHistorico(c); }}>
+                  📜 Ver histórico
+                </DropItem>
+                <DropItem onClick={() => { setDropAberto(false); onRegistrarResposta(c); }}>
+                  📋 Registrar contato
+                </DropItem>
+                {!c.ativacao_confirmada && (
+                  <DropItem onClick={() => { setDropAberto(false); onConfirmarAtivacao(c); }}>
+                    🔑 Confirmar ativação
+                  </DropItem>
+                )}
+                {c.status !== 'reabordagem' && (
+                  <>
+                    <div className="my-1 border-t border-gray-100" />
+                    <DropItem
+                      onClick={() => { setDropAberto(false); onNaoRenovar(c); }}
+                      danger
+                    >
+                      ❌ Não renovou
+                    </DropItem>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </td>
     </tr>
   );
 }
 
-// ---- chips ----
+// ---- Helpers inline ----
+
+function diasParaRenovacao(proxima: string): number {
+  const agora = new Date(); agora.setHours(0, 0, 0, 0);
+  const data  = new Date(proxima + 'T00:00:00');
+  return Math.round((data.getTime() - agora.getTime()) / 86_400_000);
+}
+
+function DropItem({
+  children,
+  onClick,
+  danger = false,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full text-left px-3 py-2 text-xs font-medium transition-colors ${
+        danger
+          ? 'text-red-600 hover:bg-red-50'
+          : 'text-gray-700 hover:bg-gray-50'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ---- Chips ----
 
 function DiasChip({ dias }: { dias: number }) {
   let cls = 'text-green-700 bg-green-100';
