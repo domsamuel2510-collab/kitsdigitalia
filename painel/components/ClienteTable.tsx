@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import type { Cliente } from '@/types/cliente';
 import { StatusBadge } from './StatusBadge';
 import { supabase } from '@/lib/supabase';
@@ -86,24 +86,55 @@ function ClienteRow({
   // Estado local para edição inline de datas
   const [editCompra,    setEditCompra]    = useState(false);
   const [editVenc,      setEditVenc]      = useState(false);
-  const [dataCompra,    setDataCompra]    = useState(c.data_compra);
-  const [dataVenc,      setDataVenc]      = useState(c.data_vencimento);
+  const [dataCompra,    setDataCompra]    = useState(c.data_compra ?? '');
+  const [dataVenc,      setDataVenc]      = useState(c.data_vencimento ?? '');
+
+  // Refs para evitar que onBlur dispare save depois de Enter/Escape já terem agido
+  const skipBlurCompra = useRef(false);
+  const skipBlurVenc   = useRef(false);
+
+  /** Valida formato YYYY-MM-DD e retorna true se OK */
+  function dataValida(valor: string): boolean {
+    if (!valor) return false;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(valor)) return false;
+    const d = new Date(valor + 'T12:00:00Z');
+    return !isNaN(d.getTime());
+  }
 
   async function salvarData(campo: 'data_compra' | 'data_vencimento', valor: string) {
-    const { error } = await supabase
-      .from('clientes')
-      .update({ [campo]: valor })
-      .eq('id', c.id);
-    if (error) {
-      toast.error('Erro ao salvar data');
-      // reverte
-      if (campo === 'data_compra') setDataCompra(c.data_compra);
-      else setDataVenc(c.data_vencimento);
-    } else {
-      toast.success('Data atualizada');
+    const isCompra = campo === 'data_compra';
+
+    // Fecha o modo edição primeiro para evitar flicker
+    if (isCompra) setEditCompra(false);
+    else          setEditVenc(false);
+
+    // Validação antes de enviar
+    if (!dataValida(valor)) {
+      toast.error('Data inválida — use o formato correto');
+      if (isCompra) setDataCompra(c.data_compra ?? '');
+      else          setDataVenc(c.data_vencimento ?? '');
+      return;
     }
-    if (campo === 'data_compra') setEditCompra(false);
-    else setEditVenc(false);
+
+    // Não envia se o valor não mudou
+    const original = isCompra ? c.data_compra : c.data_vencimento;
+    if (valor === original) return;
+
+    try {
+      const { error } = await supabase
+        .from('clientes')
+        .update({ [campo]: valor })
+        .eq('id', c.id);
+
+      if (error) throw error;
+      toast.success('Data atualizada');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erro desconhecido';
+      toast.error('Erro ao salvar data: ' + msg);
+      // Reverte para o valor original em caso de falha
+      if (isCompra) setDataCompra(c.data_compra ?? '');
+      else          setDataVenc(c.data_vencimento ?? '');
+    }
   }
 
   return (
@@ -156,16 +187,27 @@ function ClienteRow({
             value={dataCompra}
             autoFocus
             onChange={e => setDataCompra(e.target.value)}
-            onBlur={() => salvarData('data_compra', dataCompra)}
+            onBlur={() => {
+              // Ignora blur se Enter ou Escape já trataram a ação
+              if (skipBlurCompra.current) { skipBlurCompra.current = false; return; }
+              salvarData('data_compra', dataCompra);
+            }}
             onKeyDown={e => {
-              if (e.key === 'Enter') salvarData('data_compra', dataCompra);
-              if (e.key === 'Escape') { setDataCompra(c.data_compra); setEditCompra(false); }
+              if (e.key === 'Enter') {
+                skipBlurCompra.current = true; // impede double-save no blur seguinte
+                salvarData('data_compra', dataCompra);
+              }
+              if (e.key === 'Escape') {
+                skipBlurCompra.current = true; // impede save indevido no blur seguinte
+                setDataCompra(c.data_compra ?? '');
+                setEditCompra(false);
+              }
             }}
             className="w-32 text-xs border border-orange-400 rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-orange-400"
           />
         ) : (
           <span className="flex items-center gap-1 group">
-            {fmtData(dataCompra)}
+            {dataCompra ? fmtData(dataCompra) : '—'}
             <button
               onClick={() => setEditCompra(true)}
               className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-orange-500 transition-opacity text-xs"
@@ -185,16 +227,26 @@ function ClienteRow({
             value={dataVenc}
             autoFocus
             onChange={e => setDataVenc(e.target.value)}
-            onBlur={() => salvarData('data_vencimento', dataVenc)}
+            onBlur={() => {
+              if (skipBlurVenc.current) { skipBlurVenc.current = false; return; }
+              salvarData('data_vencimento', dataVenc);
+            }}
             onKeyDown={e => {
-              if (e.key === 'Enter') salvarData('data_vencimento', dataVenc);
-              if (e.key === 'Escape') { setDataVenc(c.data_vencimento); setEditVenc(false); }
+              if (e.key === 'Enter') {
+                skipBlurVenc.current = true;
+                salvarData('data_vencimento', dataVenc);
+              }
+              if (e.key === 'Escape') {
+                skipBlurVenc.current = true;
+                setDataVenc(c.data_vencimento ?? '');
+                setEditVenc(false);
+              }
             }}
             className="w-32 text-xs border border-orange-400 rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-orange-400"
           />
         ) : (
           <span className="flex items-center gap-1 group">
-            {fmtData(dataVenc)}
+            {dataVenc ? fmtData(dataVenc) : '—'}
             <button
               onClick={() => setEditVenc(true)}
               className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-orange-500 transition-opacity text-xs"
