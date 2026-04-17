@@ -2,19 +2,20 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { hoje, addDias, gerarMsgConfirmacao, PRODUTOS } from '@/lib/utils';
+import { hoje, addDias, gerarMsgConfirmacao, PRODUTOS, PLANOS, diasDoPlano } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
 const PAISES = ['Brasil', 'Exterior'];
 
 interface Props {
   onClose: () => void;
-  onSaved: (clienteId: string) => void; // passa id para perguntar sobre ativação
+  onSaved: (clienteId: string) => void;
 }
 
 export function AdicionarClienteModal({ onClose, onSaved }: Props) {
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step,      setStep]      = useState<1 | 2>(1);
   const [clienteId, setClienteId] = useState('');
+  const [planoSel,  setPlanoSel]  = useState('mensal');
   const [form, setForm] = useState({
     nome: '', email: '', whatsapp: '', produto: PRODUTOS[0],
     pais: 'Brasil', observacoes: '',
@@ -32,22 +33,23 @@ export function AdicionarClienteModal({ onClose, onSaved }: Props) {
     }
     setLoading(true);
     const dataCompra     = hoje();
-    const dataVencimento = addDias(dataCompra, 30);
+    const dataVencimento = addDias(dataCompra, diasDoPlano(planoSel));
     const msg = gerarMsgConfirmacao(
       form.nome, form.produto, form.email, form.whatsapp, dataCompra, dataVencimento
     );
 
     const { data, error } = await supabase.from('clientes').insert({
-      nome: form.nome,
-      email: form.email,
-      whatsapp: form.whatsapp,
-      produto: form.produto,
-      pais: form.pais,
-      observacoes: form.observacoes || null,
-      data_compra: dataCompra,
-      data_vencimento: dataVencimento,
-      status: 'ativo',
-      msg_confirmacao: msg,
+      nome:               form.nome,
+      email:              form.email,
+      whatsapp:           form.whatsapp,
+      produto:            form.produto,
+      plano:              planoSel,
+      pais:               form.pais,
+      observacoes:        form.observacoes || null,
+      data_compra:        dataCompra,
+      data_vencimento:    dataVencimento,
+      status:             'ativo',
+      msg_confirmacao:    msg,
       tentativas_contato: 0,
       ativacao_confirmada: false,
     }).select('id').single();
@@ -55,7 +57,7 @@ export function AdicionarClienteModal({ onClose, onSaved }: Props) {
     setLoading(false);
     if (error) { toast.error('Erro ao salvar: ' + error.message); return; }
     setClienteId(data.id);
-    setStep(2); // avança para confirmação de ativação
+    setStep(2);
   }
 
   async function confirmarAtivacao(ativado: boolean) {
@@ -71,6 +73,8 @@ export function AdicionarClienteModal({ onClose, onSaved }: Props) {
     onSaved(clienteId);
     onClose();
   }
+
+  const planoAtual = PLANOS.find(p => p.value === planoSel);
 
   return (
     <Overlay onClose={onClose}>
@@ -90,6 +94,7 @@ export function AdicionarClienteModal({ onClose, onSaved }: Props) {
               <input value={form.whatsapp} onChange={e => set('whatsapp', e.target.value)}
                 className={INPUT} placeholder="11999990000" />
             </Field>
+
             <div className="grid grid-cols-2 gap-3">
               <Field label="Produto">
                 <select value={form.produto} onChange={e => set('produto', e.target.value)} className={INPUT}>
@@ -102,11 +107,40 @@ export function AdicionarClienteModal({ onClose, onSaved }: Props) {
                 </select>
               </Field>
             </div>
+
+            {/* Plano com cálculo automático */}
+            <Field label="Plano">
+              <div className="grid grid-cols-4 gap-2">
+                {PLANOS.map(p => (
+                  <button
+                    key={p.value}
+                    type="button"
+                    onClick={() => setPlanoSel(p.value)}
+                    className={[
+                      'py-2 rounded-lg border text-xs font-medium transition-colors',
+                      planoSel === p.value
+                        ? 'bg-orange-500 border-orange-500 text-white'
+                        : 'border-gray-300 text-gray-600 hover:bg-gray-50',
+                    ].join(' ')}
+                  >
+                    {p.label.split(' ')[0]}
+                    <span className="block text-xs opacity-70">{p.dias}d</span>
+                  </button>
+                ))}
+              </div>
+              {planoAtual && (
+                <p className="mt-1.5 text-xs text-gray-500">
+                  Vencimento em <strong>{planoAtual.dias} dias</strong> a partir de hoje
+                </p>
+              )}
+            </Field>
+
             <Field label="Observações">
               <textarea value={form.observacoes} onChange={e => set('observacoes', e.target.value)}
                 className={`${INPUT} h-20 resize-none`} placeholder="Opcional..." />
             </Field>
           </div>
+
           <div className="mt-5 flex gap-2 justify-end">
             <button onClick={onClose} className="px-4 py-2 text-sm rounded-lg border hover:bg-gray-50">
               Cancelar
@@ -126,7 +160,8 @@ export function AdicionarClienteModal({ onClose, onSaved }: Props) {
             <div className="text-4xl mb-2">✅</div>
             <h2 className="text-lg font-bold text-gray-900">Cliente salvo!</h2>
             <p className="text-sm text-gray-500 mt-1">
-              <strong>{form.nome}</strong> foi adicionado com vencimento em 30 dias.
+              <strong>{form.nome}</strong> adicionado com plano <strong>{planoAtual?.label.split(' ')[0]}</strong>{' '}
+              ({planoAtual?.dias} dias).
             </p>
           </div>
 

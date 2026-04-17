@@ -142,8 +142,11 @@ function ClienteRow({
         </div>
       </td>
 
-      {/* Produto */}
-      <td className="px-4 py-3 hidden md:table-cell text-gray-700">{c.produto}</td>
+      {/* Produto + Plano */}
+      <td className="px-4 py-3 hidden md:table-cell text-gray-700">
+        <div>{c.produto}</div>
+        {c.plano && <PlanoBadge plano={c.plano} />}
+      </td>
 
       {/* Data compra — edição inline */}
       <td className="px-4 py-3 hidden lg:table-cell text-gray-600">
@@ -276,6 +279,24 @@ function DiasChip({ dias }: { dias: number }) {
   return (
     <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${cls}`}>
       {dias}d
+    </span>
+  );
+}
+
+const PLANO_STYLE: Record<string, string> = {
+  mensal:      'bg-gray-100   text-gray-600',
+  trimestral:  'bg-blue-100   text-blue-700',
+  semestral:   'bg-purple-100 text-purple-700',
+  anual:       'bg-orange-100 text-orange-700',
+};
+const PLANO_LABEL: Record<string, string> = {
+  mensal: 'Mensal', trimestral: 'Trimestral', semestral: 'Semestral', anual: 'Anual',
+};
+
+function PlanoBadge({ plano }: { plano: string }) {
+  return (
+    <span className={`inline-block mt-0.5 px-1.5 py-0.5 rounded text-xs font-medium ${PLANO_STYLE[plano] ?? 'bg-gray-100 text-gray-600'}`}>
+      {PLANO_LABEL[plano] ?? plano}
     </span>
   );
 }

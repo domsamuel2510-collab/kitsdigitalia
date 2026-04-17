@@ -18,6 +18,7 @@ export interface Cliente {
   email: string;
   whatsapp: string;
   produto: string;
+  plano: string | null;              // 'mensal' | 'trimestral' | 'semestral' | 'anual'
   pais: string;                      // 'Brasil' | 'Exterior'
   data_compra: string;
   data_vencimento: string;

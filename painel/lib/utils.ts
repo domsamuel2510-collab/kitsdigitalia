@@ -1,5 +1,16 @@
 import type { Status, Cliente } from '@/types/cliente';
 
+export const PLANOS: { value: string; label: string; dias: number }[] = [
+  { value: 'mensal',     label: 'Mensal (30 dias)',     dias: 30  },
+  { value: 'trimestral', label: 'Trimestral (90 dias)', dias: 90  },
+  { value: 'semestral',  label: 'Semestral (180 dias)', dias: 180 },
+  { value: 'anual',      label: 'Anual (365 dias)',     dias: 365 },
+];
+
+export function diasDoPlano(plano: string): number {
+  return PLANOS.find(p => p.value === plano)?.dias ?? 30;
+}
+
 export const PRODUTOS = [
   'ChatGPT Pro',
   'Claude',

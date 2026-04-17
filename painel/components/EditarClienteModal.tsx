@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import type { Cliente } from '@/types/cliente';
 import { supabase } from '@/lib/supabase';
-import { PRODUTOS } from '@/lib/utils';
+import { PRODUTOS, PLANOS, diasDoPlano, addDias } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
 const PAISES = ['Brasil', 'Exterior'];
@@ -20,6 +20,7 @@ export function EditarClienteModal({ cliente, onClose, onSaved }: Props) {
     email:               cliente.email,
     whatsapp:            cliente.whatsapp,
     produto:             cliente.produto,
+    plano:               cliente.plano ?? 'mensal',
     pais:                cliente.pais ?? 'Brasil',
     observacoes:         cliente.observacoes ?? '',
     data_compra:         cliente.data_compra,
@@ -29,8 +30,18 @@ export function EditarClienteModal({ cliente, onClose, onSaved }: Props) {
   });
   const [loading, setLoading] = useState(false);
 
+  /** Atualiza um campo simples e recalcula vencimento se necessário */
   function set(field: string, value: string | boolean) {
-    setForm(prev => ({ ...prev, [field]: value }));
+    setForm(prev => {
+      const next = { ...prev, [field]: value };
+
+      // Recalcula data_vencimento ao mudar data_compra ou plano
+      if ((field === 'data_compra' || field === 'plano') && next.data_compra) {
+        next.data_vencimento = addDias(next.data_compra, diasDoPlano(next.plano));
+      }
+
+      return next;
+    });
   }
 
   async function salvar() {
@@ -40,22 +51,21 @@ export function EditarClienteModal({ cliente, onClose, onSaved }: Props) {
     }
     setLoading(true);
 
-    const updates: Record<string, unknown> = {
-      nome:                form.nome,
-      email:               form.email,
-      whatsapp:            form.whatsapp,
-      produto:             form.produto,
-      pais:                form.pais,
-      observacoes:         form.observacoes || null,
-      data_compra:         form.data_compra,
-      data_vencimento:     form.data_vencimento,
-      ativacao_confirmada: form.ativacao_confirmada,
-      data_ativacao:       form.data_ativacao || null,
-    };
-
     const { error } = await supabase
       .from('clientes')
-      .update(updates)
+      .update({
+        nome:                form.nome,
+        email:               form.email,
+        whatsapp:            form.whatsapp,
+        produto:             form.produto,
+        plano:               form.plano,
+        pais:                form.pais,
+        observacoes:         form.observacoes || null,
+        data_compra:         form.data_compra,
+        data_vencimento:     form.data_vencimento,
+        ativacao_confirmada: form.ativacao_confirmada,
+        data_ativacao:       form.data_ativacao || null,
+      })
       .eq('id', cliente.id);
 
     setLoading(false);
@@ -77,25 +87,19 @@ export function EditarClienteModal({ cliente, onClose, onSaved }: Props) {
         <h2 className="text-lg font-bold text-gray-900 mb-4">✏️ Editar cliente</h2>
 
         <div className="space-y-3">
-          {/* Linha: nome */}
           <Field label="Nome completo *">
-            <input value={form.nome} onChange={e => set('nome', e.target.value)}
-              className={INPUT} />
+            <input value={form.nome} onChange={e => set('nome', e.target.value)} className={INPUT} />
           </Field>
 
-          {/* Linha: email + whatsapp */}
           <div className="grid grid-cols-2 gap-3">
             <Field label="Email *">
-              <input type="email" value={form.email} onChange={e => set('email', e.target.value)}
-                className={INPUT} />
+              <input type="email" value={form.email} onChange={e => set('email', e.target.value)} className={INPUT} />
             </Field>
             <Field label="WhatsApp *">
-              <input value={form.whatsapp} onChange={e => set('whatsapp', e.target.value)}
-                className={INPUT} />
+              <input value={form.whatsapp} onChange={e => set('whatsapp', e.target.value)} className={INPUT} />
             </Field>
           </div>
 
-          {/* Linha: produto + país */}
           <div className="grid grid-cols-2 gap-3">
             <Field label="Produto">
               <select value={form.produto} onChange={e => set('produto', e.target.value)} className={INPUT}>
@@ -109,23 +113,57 @@ export function EditarClienteModal({ cliente, onClose, onSaved }: Props) {
             </Field>
           </div>
 
-          {/* Linha: data_compra + data_vencimento */}
+          {/* Plano — ocupa linha inteira */}
+          <Field label="Plano">
+            <div className="grid grid-cols-4 gap-2">
+              {PLANOS.map(p => (
+                <button
+                  key={p.value}
+                  type="button"
+                  onClick={() => set('plano', p.value)}
+                  className={[
+                    'py-2 rounded-lg border text-xs font-medium transition-colors',
+                    form.plano === p.value
+                      ? 'bg-orange-500 border-orange-500 text-white'
+                      : 'border-gray-300 text-gray-600 hover:bg-gray-50',
+                  ].join(' ')}
+                >
+                  {p.label.split(' ')[0]}
+                  <span className="block text-xs opacity-70">{p.dias}d</span>
+                </button>
+              ))}
+            </div>
+          </Field>
+
+          {/* Datas — compra recalcula vencimento automaticamente */}
           <div className="grid grid-cols-2 gap-3">
             <Field label="Data de compra">
-              <input type="date" value={form.data_compra}
-                onChange={e => set('data_compra', e.target.value)} className={INPUT} />
+              <input
+                type="date"
+                value={form.data_compra}
+                onChange={e => set('data_compra', e.target.value)}
+                className={INPUT}
+              />
             </Field>
-            <Field label="Data de vencimento">
-              <input type="date" value={form.data_vencimento}
-                onChange={e => set('data_vencimento', e.target.value)} className={INPUT} />
+            <Field label="Vencimento (calculado)">
+              <input
+                type="date"
+                value={form.data_vencimento}
+                onChange={e => set('data_vencimento', e.target.value)}
+                className={INPUT}
+                title="Editável manualmente — ou recalculado ao mudar compra/plano"
+              />
             </Field>
           </div>
 
-          {/* Linha: data_ativacao + checkbox */}
           <div className="grid grid-cols-2 gap-3 items-end">
             <Field label="Data de ativação">
-              <input type="date" value={form.data_ativacao}
-                onChange={e => set('data_ativacao', e.target.value)} className={INPUT} />
+              <input
+                type="date"
+                value={form.data_ativacao}
+                onChange={e => set('data_ativacao', e.target.value)}
+                className={INPUT}
+              />
             </Field>
             <label className="flex items-center gap-2 pb-2 cursor-pointer select-none">
               <input
@@ -138,10 +176,13 @@ export function EditarClienteModal({ cliente, onClose, onSaved }: Props) {
             </label>
           </div>
 
-          {/* Observações */}
           <Field label="Observações">
-            <textarea value={form.observacoes} onChange={e => set('observacoes', e.target.value)}
-              className={`${INPUT} h-20 resize-none`} placeholder="Opcional..." />
+            <textarea
+              value={form.observacoes}
+              onChange={e => set('observacoes', e.target.value)}
+              className={`${INPUT} h-20 resize-none`}
+              placeholder="Opcional..."
+            />
           </Field>
         </div>
 

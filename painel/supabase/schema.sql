@@ -73,3 +73,5 @@ ALTER TABLE clientes ADD COLUMN IF NOT EXISTS resposta_cliente     TEXT
   CHECK (resposta_cliente IN ('respondeu','nao_respondeu','vai_renovar','nao_quer_mais'));
 ALTER TABLE clientes ADD COLUMN IF NOT EXISTS pais                 TEXT    DEFAULT 'Brasil';
 ALTER TABLE clientes ADD COLUMN IF NOT EXISTS ultima_tentativa     DATE;
+ALTER TABLE clientes ADD COLUMN IF NOT EXISTS plano               TEXT    DEFAULT 'mensal'
+  CHECK (plano IN ('mensal','trimestral','semestral','anual'));
