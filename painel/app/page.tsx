@@ -7,6 +7,8 @@ import { DashboardCards } from '@/components/DashboardCards';
 import { ClienteTable } from '@/components/ClienteTable';
 import { AdicionarClienteModal } from '@/components/AdicionarClienteModal';
 import { RenovarModal } from '@/components/RenovarModal';
+import { RespostaClienteModal } from '@/components/RespostaClienteModal';
+import { ordenarPorUrgencia, precisaAtencao } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
 const STATUS_LABELS: Record<string, string> = {
@@ -25,18 +27,17 @@ export default function Dashboard() {
   const [filtro,   setFiltro]   = useState<string>('todos');
   const [busca,    setBusca]    = useState('');
 
-  const [showAdicionar, setShowAdicionar] = useState(false);
-  const [clienteRenovar, setClienteRenovar] = useState<Cliente | null>(null);
+  const [showAdicionar,     setShowAdicionar]     = useState(false);
+  const [clienteRenovar,    setClienteRenovar]    = useState<Cliente | null>(null);
+  const [clienteResposta,   setClienteResposta]   = useState<Cliente | null>(null);
 
   const carregar = useCallback(async () => {
     setLoading(true);
-    // Recalcula status no banco antes de buscar
     await supabase.rpc('atualizar_status_todos').maybeSingle();
 
     const { data, error } = await supabase
       .from('clientes')
-      .select('*')
-      .order('data_vencimento', { ascending: true });
+      .select('*');
 
     if (error) { toast.error('Erro ao carregar: ' + error.message); }
     else setClientes((data as Cliente[]) ?? []);
@@ -55,19 +56,52 @@ export default function Dashboard() {
     carregar();
   }
 
-  const filtrados = clientes.filter(c => {
-    const matchFiltro = filtro === 'todos' || c.status === filtro;
-    const matchBusca  = !busca ||
-      c.nome.toLowerCase().includes(busca.toLowerCase()) ||
-      c.email.toLowerCase().includes(busca.toLowerCase()) ||
-      c.whatsapp.includes(busca) ||
-      c.produto.toLowerCase().includes(busca.toLowerCase());
-    return matchFiltro && matchBusca;
-  });
+  // ---- métricas de atenção ----
+  const precisamAtencao = clientes.filter(precisaAtencao);
+  const ativacosPendentes = clientes.filter(c => !c.ativacao_confirmada && c.status === 'ativo');
+
+  // ---- ordenação por urgência + filtros ----
+  const filtrados = ordenarPorUrgencia(
+    clientes.filter(c => {
+      const matchFiltro = filtro === 'todos' || c.status === filtro;
+      const matchBusca  = !busca ||
+        c.nome.toLowerCase().includes(busca.toLowerCase()) ||
+        c.email.toLowerCase().includes(busca.toLowerCase()) ||
+        c.whatsapp.includes(busca) ||
+        c.produto.toLowerCase().includes(busca.toLowerCase());
+      return matchFiltro && matchBusca;
+    })
+  );
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="space-y-5">
+        {/* Banner de atenção */}
+        {(precisamAtencao.length > 0 || ativacosPendentes.length > 0) && (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 flex flex-wrap items-center gap-3">
+            <span className="animate-pulse text-red-500 text-lg">🔴</span>
+            <div className="flex-1 text-sm text-red-800">
+              {precisamAtencao.length > 0 && (
+                <span className="font-semibold">
+                  {precisamAtencao.length} cliente{precisamAtencao.length > 1 ? 's precisam' : ' precisa'} de atenção hoje
+                </span>
+              )}
+              {precisamAtencao.length > 0 && ativacosPendentes.length > 0 && ' · '}
+              {ativacosPendentes.length > 0 && (
+                <span>
+                  {ativacosPendentes.length} ativação{ativacosPendentes.length > 1 ? 'ções pendentes' : ' pendente'}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => setFiltro('vence_hoje')}
+              className="text-xs font-medium text-red-700 underline"
+            >
+              Ver agora →
+            </button>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
@@ -78,7 +112,6 @@ export default function Dashboard() {
             <button
               onClick={carregar}
               className="px-3 py-2 text-sm rounded-lg border hover:bg-gray-50 text-gray-600"
-              title="Atualizar status"
             >
               🔄 Atualizar
             </button>
@@ -113,7 +146,7 @@ export default function Dashboard() {
           </select>
         </div>
 
-        {/* Tabela */}
+        {/* Tabela ordenada por urgência */}
         {loading ? (
           <div className="text-center py-16 text-gray-400">Carregando…</div>
         ) : (
@@ -121,6 +154,7 @@ export default function Dashboard() {
             clientes={filtrados}
             onRenovar={setClienteRenovar}
             onNaoRenovar={marcarReabordagem}
+            onRegistrarResposta={setClienteResposta}
             onEditar={c => toast(`Edição de ${c.nome} (em breve)`, { icon: 'ℹ️' })}
           />
         )}
@@ -129,7 +163,7 @@ export default function Dashboard() {
       {showAdicionar && (
         <AdicionarClienteModal
           onClose={() => setShowAdicionar(false)}
-          onSaved={carregar}
+          onSaved={() => { carregar(); }}
         />
       )}
 
@@ -137,6 +171,14 @@ export default function Dashboard() {
         <RenovarModal
           cliente={clienteRenovar}
           onClose={() => setClienteRenovar(null)}
+          onSaved={carregar}
+        />
+      )}
+
+      {clienteResposta && (
+        <RespostaClienteModal
+          cliente={clienteResposta}
+          onClose={() => setClienteResposta(null)}
           onSaved={carregar}
         />
       )}

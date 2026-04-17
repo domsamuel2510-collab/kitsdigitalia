@@ -62,3 +62,14 @@ ALTER TABLE clientes ENABLE ROW LEVEL SECURITY;
 
 -- Policy permissiva para desenvolvimento (troque por auth real em produção)
 CREATE POLICY "allow_all" ON clientes FOR ALL USING (true) WITH CHECK (true);
+
+-- -------------------------------------------------------
+-- Migração: novas colunas (execute se a tabela já existir)
+-- -------------------------------------------------------
+ALTER TABLE clientes ADD COLUMN IF NOT EXISTS tentativas_contato   INT     DEFAULT 0;
+ALTER TABLE clientes ADD COLUMN IF NOT EXISTS data_ativacao        DATE;
+ALTER TABLE clientes ADD COLUMN IF NOT EXISTS ativacao_confirmada  BOOLEAN DEFAULT false;
+ALTER TABLE clientes ADD COLUMN IF NOT EXISTS resposta_cliente     TEXT
+  CHECK (resposta_cliente IN ('respondeu','nao_respondeu','vai_renovar','nao_quer_mais'));
+ALTER TABLE clientes ADD COLUMN IF NOT EXISTS pais                 TEXT    DEFAULT 'Brasil';
+ALTER TABLE clientes ADD COLUMN IF NOT EXISTS ultima_tentativa     DATE;

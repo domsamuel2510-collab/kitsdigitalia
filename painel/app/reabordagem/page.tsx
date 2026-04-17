@@ -4,14 +4,22 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Cliente } from '@/types/cliente';
 import { RenovarModal } from '@/components/RenovarModal';
-import { fmtData, gerarMsgReabordagem, whatsappLink } from '@/lib/utils';
+import { RespostaClienteModal } from '@/components/RespostaClienteModal';
+import {
+  fmtData, gerarMsgReabordagemBrasil, gerarMsgReabordagemExterior,
+  whatsappLink, diasSemContato,
+} from '@/lib/utils';
 import toast from 'react-hot-toast';
 
+type Aba = 'brasil' | 'exterior';
+
 export default function ReabordagemPage() {
-  const [clientes, setClientes]         = useState<Cliente[]>([]);
-  const [loading,  setLoading]          = useState(true);
+  const [clientes,       setClientes]       = useState<Cliente[]>([]);
+  const [loading,        setLoading]        = useState(true);
+  const [aba,            setAba]            = useState<Aba>('brasil');
   const [clienteRenovar, setClienteRenovar] = useState<Cliente | null>(null);
-  const [copiados, setCopiados]         = useState<Record<string, boolean>>({});
+  const [clienteResp,    setClienteResp]    = useState<Cliente | null>(null);
+  const [copiados,       setCopiados]       = useState<Record<string, boolean>>({});
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -28,9 +36,18 @@ export default function ReabordagemPage() {
 
   useEffect(() => { carregar(); }, [carregar]);
 
+  const brasil   = clientes.filter(c => !c.pais || c.pais === 'Brasil');
+  const exterior = clientes.filter(c => c.pais && c.pais !== 'Brasil');
+  const visiveis = aba === 'brasil' ? brasil : exterior;
+
+  function gerarMsg(c: Cliente) {
+    return aba === 'brasil'
+      ? gerarMsgReabordagemBrasil(c.nome, c.produto)
+      : gerarMsgReabordagemExterior(c.nome, c.produto);
+  }
+
   function copiar(c: Cliente) {
-    const msg = gerarMsgReabordagem(c.nome, c.produto);
-    navigator.clipboard.writeText(msg).then(() => {
+    navigator.clipboard.writeText(gerarMsg(c)).then(() => {
       setCopiados(prev => ({ ...prev, [c.id]: true }));
       setTimeout(() => setCopiados(prev => ({ ...prev, [c.id]: false })), 2000);
     });
@@ -54,63 +71,120 @@ export default function ReabordagemPage() {
           <p className="text-sm text-gray-500">{clientes.length} cliente(s) para reabordar</p>
         </div>
 
+        {/* Abas Brasil / Exterior */}
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+          <button
+            onClick={() => setAba('brasil')}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              aba === 'brasil'
+                ? 'bg-white shadow text-gray-900'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            🇧🇷 Brasil ({brasil.length})
+          </button>
+          <button
+            onClick={() => setAba('exterior')}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              aba === 'exterior'
+                ? 'bg-white shadow text-gray-900'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            🌍 Exterior ({exterior.length})
+          </button>
+        </div>
+
         {loading ? (
           <div className="text-center py-16 text-gray-400">Carregando…</div>
-        ) : !clientes.length ? (
+        ) : !visiveis.length ? (
           <div className="text-center py-16 text-gray-400">
-            Nenhum cliente na lista de reabordagem. ✅
+            Nenhum cliente nesta categoria. ✅
           </div>
         ) : (
           <div className="space-y-3">
-            {clientes.map(c => (
-              <div key={c.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                <div className="flex flex-col sm:flex-row sm:items-start gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-gray-900">{c.nome}</span>
-                      <span className="text-xs text-gray-400">⚫ Reabordagem</span>
+            {visiveis.map(c => {
+              const dsc = diasSemContato(c.ultima_tentativa);
+              const tentativas = c.tentativas_contato ?? 0;
+
+              return (
+                <div key={c.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-gray-900">{c.nome}</span>
+                        <span className="text-xs text-gray-400">⚫ Reabordagem</span>
+                        {c.pais && (
+                          <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
+                            {c.pais}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-500 mt-0.5">
+                        {c.produto} · venceu {fmtData(c.data_vencimento)} · {c.whatsapp}
+                      </p>
+
+                      {/* Contexto */}
+                      <div className="mt-1.5 flex flex-wrap gap-3 text-xs text-gray-500">
+                        <span>📊 Tentativas: <strong>{tentativas}</strong></span>
+                        <span>📅 Sem contato: <strong>{dsc >= 999 ? 'nunca' : `${dsc}d`}</strong></span>
+                        {c.resposta_cliente && (
+                          <span>💬 Última resposta: <strong>{RESPOSTA_LABELS[c.resposta_cliente] ?? c.resposta_cliente}</strong></span>
+                        )}
+                        {c.observacoes && (
+                          <span title={c.observacoes}>📝 {c.observacoes.slice(0, 40)}{c.observacoes.length > 40 ? '…' : ''}</span>
+                        )}
+                      </div>
+
+                      {/* Mensagem */}
+                      <pre className={`mt-2 border rounded-lg p-2.5 text-xs font-mono whitespace-pre-wrap break-words ${
+                        aba === 'brasil'
+                          ? 'bg-green-50 border-green-100 text-gray-800'
+                          : 'bg-blue-50 border-blue-100 text-gray-800'
+                      }`}>
+                        {gerarMsg(c)}
+                      </pre>
                     </div>
-                    <p className="text-sm text-gray-500 mt-0.5">
-                      {c.produto} · venceu {fmtData(c.data_vencimento)} · {c.whatsapp}
-                    </p>
 
-                    {/* Mensagem de reabordagem */}
-                    <pre className="mt-2 bg-gray-50 border border-gray-100 rounded-lg p-2.5 text-xs text-gray-700 font-mono whitespace-pre-wrap break-words">
-                      {gerarMsgReabordagem(c.nome, c.produto)}
-                    </pre>
-                  </div>
-
-                  <div className="flex gap-2 sm:flex-col shrink-0">
-                    <button
-                      onClick={() => copiar(c)}
-                      className="flex-1 sm:flex-none px-3 py-1.5 text-xs rounded-lg border hover:bg-gray-50 font-medium"
-                    >
-                      {copiados[c.id] ? '✅ Copiado' : '📋 Copiar'}
-                    </button>
-                    <a
-                      href={whatsappLink(c.whatsapp)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 sm:flex-none px-3 py-1.5 text-xs rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium text-center"
-                    >
-                      💬 WhatsApp
-                    </a>
-                    <button
-                      onClick={() => setClienteRenovar(c)}
-                      className="flex-1 sm:flex-none px-3 py-1.5 text-xs rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-medium"
-                    >
-                      Renovar
-                    </button>
-                    <button
-                      onClick={() => removerDaLista(c)}
-                      className="flex-1 sm:flex-none px-3 py-1.5 text-xs rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium"
-                    >
-                      Remover
-                    </button>
+                    {/* Ações */}
+                    <div className="flex gap-2 sm:flex-col shrink-0">
+                      <button
+                        onClick={() => copiar(c)}
+                        className="flex-1 sm:flex-none px-3 py-1.5 text-xs rounded-lg border hover:bg-gray-50 font-medium"
+                      >
+                        {copiados[c.id] ? '✅ Copiado' : '📋 Copiar'}
+                      </button>
+                      <a
+                        href={whatsappLink(c.whatsapp)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 sm:flex-none px-3 py-1.5 text-xs rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium text-center"
+                      >
+                        💬 WhatsApp
+                      </a>
+                      <button
+                        onClick={() => setClienteResp(c)}
+                        className="flex-1 sm:flex-none px-3 py-1.5 text-xs rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-700 font-medium"
+                      >
+                        📋 Resposta
+                      </button>
+                      <button
+                        onClick={() => setClienteRenovar(c)}
+                        className="flex-1 sm:flex-none px-3 py-1.5 text-xs rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-medium"
+                      >
+                        Renovar
+                      </button>
+                      <button
+                        onClick={() => removerDaLista(c)}
+                        className="flex-1 sm:flex-none px-3 py-1.5 text-xs rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium"
+                      >
+                        Remover
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -122,6 +196,21 @@ export default function ReabordagemPage() {
           onSaved={carregar}
         />
       )}
+
+      {clienteResp && (
+        <RespostaClienteModal
+          cliente={clienteResp}
+          onClose={() => setClienteResp(null)}
+          onSaved={carregar}
+        />
+      )}
     </>
   );
 }
+
+const RESPOSTA_LABELS: Record<string, string> = {
+  respondeu:    '💬 Respondeu',
+  vai_renovar:  '✅ Vai renovar',
+  nao_respondeu:'🔕 Não respondeu',
+  nao_quer_mais:'❌ Não quer mais',
+};
