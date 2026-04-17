@@ -8,6 +8,9 @@ import { ClienteTable } from '@/components/ClienteTable';
 import { AdicionarClienteModal } from '@/components/AdicionarClienteModal';
 import { RenovarModal } from '@/components/RenovarModal';
 import { RespostaClienteModal } from '@/components/RespostaClienteModal';
+import { EditarClienteModal } from '@/components/EditarClienteModal';
+import { HistoricoContatoDrawer } from '@/components/HistoricoContatoDrawer';
+import { ConfirmarAtivacaoModal } from '@/components/ConfirmarAtivacaoModal';
 import { ordenarPorUrgencia, precisaAtencao } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
@@ -27,18 +30,18 @@ export default function Dashboard() {
   const [filtro,   setFiltro]   = useState<string>('todos');
   const [busca,    setBusca]    = useState('');
 
-  const [showAdicionar,     setShowAdicionar]     = useState(false);
-  const [clienteRenovar,    setClienteRenovar]    = useState<Cliente | null>(null);
-  const [clienteResposta,   setClienteResposta]   = useState<Cliente | null>(null);
+  const [showAdicionar,       setShowAdicionar]       = useState(false);
+  const [clienteRenovar,      setClienteRenovar]      = useState<Cliente | null>(null);
+  const [clienteResposta,     setClienteResposta]     = useState<Cliente | null>(null);
+  const [clienteEditar,       setClienteEditar]       = useState<Cliente | null>(null);
+  const [clienteHistorico,    setClienteHistorico]    = useState<Cliente | null>(null);
+  const [clienteAtivacao,     setClienteAtivacao]     = useState<Cliente | null>(null);
 
   const carregar = useCallback(async () => {
     setLoading(true);
     await supabase.rpc('atualizar_status_todos').maybeSingle();
 
-    const { data, error } = await supabase
-      .from('clientes')
-      .select('*');
-
+    const { data, error } = await supabase.from('clientes').select('*');
     if (error) { toast.error('Erro ao carregar: ' + error.message); }
     else setClientes((data as Cliente[]) ?? []);
     setLoading(false);
@@ -56,11 +59,9 @@ export default function Dashboard() {
     carregar();
   }
 
-  // ---- métricas de atenção ----
-  const precisamAtencao = clientes.filter(precisaAtencao);
+  const precisamAtencao   = clientes.filter(precisaAtencao);
   const ativacosPendentes = clientes.filter(c => !c.ativacao_confirmada && c.status === 'ativo');
 
-  // ---- ordenação por urgência + filtros ----
   const filtrados = ordenarPorUrgencia(
     clientes.filter(c => {
       const matchFiltro = filtro === 'todos' || c.status === filtro;
@@ -124,10 +125,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Cards de resumo */}
         <DashboardCards clientes={clientes} />
 
-        {/* Filtros + busca */}
         <div className="flex flex-col sm:flex-row gap-3">
           <input
             value={busca}
@@ -146,7 +145,6 @@ export default function Dashboard() {
           </select>
         </div>
 
-        {/* Tabela ordenada por urgência */}
         {loading ? (
           <div className="text-center py-16 text-gray-400">Carregando…</div>
         ) : (
@@ -155,7 +153,9 @@ export default function Dashboard() {
             onRenovar={setClienteRenovar}
             onNaoRenovar={marcarReabordagem}
             onRegistrarResposta={setClienteResposta}
-            onEditar={c => toast(`Edição de ${c.nome} (em breve)`, { icon: 'ℹ️' })}
+            onEditar={setClienteEditar}
+            onVerHistorico={setClienteHistorico}
+            onConfirmarAtivacao={setClienteAtivacao}
           />
         )}
       </div>
@@ -163,7 +163,7 @@ export default function Dashboard() {
       {showAdicionar && (
         <AdicionarClienteModal
           onClose={() => setShowAdicionar(false)}
-          onSaved={() => { carregar(); }}
+          onSaved={() => carregar()}
         />
       )}
 
@@ -179,6 +179,30 @@ export default function Dashboard() {
         <RespostaClienteModal
           cliente={clienteResposta}
           onClose={() => setClienteResposta(null)}
+          onSaved={carregar}
+        />
+      )}
+
+      {clienteEditar && (
+        <EditarClienteModal
+          cliente={clienteEditar}
+          onClose={() => setClienteEditar(null)}
+          onSaved={carregar}
+        />
+      )}
+
+      {clienteHistorico && (
+        <HistoricoContatoDrawer
+          cliente={clienteHistorico}
+          onClose={() => setClienteHistorico(null)}
+          onSaved={carregar}
+        />
+      )}
+
+      {clienteAtivacao && (
+        <ConfirmarAtivacaoModal
+          cliente={clienteAtivacao}
+          onClose={() => setClienteAtivacao(null)}
           onSaved={carregar}
         />
       )}
