@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Cliente, Status } from '@/types/cliente';
-import { DashboardCards } from '@/components/DashboardCards';
+import { DashboardCards, FILTRO_GRUPOS } from '@/components/DashboardCards';
 import { ClienteTable } from '@/components/ClienteTable';
 import { AdicionarClienteModal } from '@/components/AdicionarClienteModal';
 import { RenovarModal } from '@/components/RenovarModal';
@@ -64,7 +64,9 @@ export default function Dashboard() {
 
   const filtrados = ordenarPorUrgencia(
     clientes.filter(c => {
-      const matchFiltro = filtro === 'todos' || c.status === filtro;
+      const grupo = FILTRO_GRUPOS[filtro];
+      const matchFiltro = filtro === 'todos'
+        || (grupo ? grupo.includes(c.status) : c.status === filtro);
       const matchBusca  = !busca ||
         c.nome.toLowerCase().includes(busca.toLowerCase()) ||
         c.email.toLowerCase().includes(busca.toLowerCase()) ||
@@ -125,7 +127,11 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <DashboardCards clientes={clientes} />
+        <DashboardCards
+          clientes={clientes}
+          filtroAtivo={filtro}
+          onFiltrar={setFiltro}
+        />
 
         <div className="flex flex-col sm:flex-row gap-3">
           <input
