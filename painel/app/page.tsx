@@ -311,7 +311,7 @@ export default function Dashboard() {
 
       {/* ---- Botão flutuante UNDO ---- */}
       {undoPendente && (
-        <div className="fixed bottom-6 left-6 z-50 flex items-center gap-2 bg-gray-900 text-white rounded-xl px-4 py-3 shadow-2xl animate-in slide-in-from-bottom-4 duration-200">
+        <div className="fixed bottom-6 left-6 z-50 flex items-center gap-2 bg-gray-900 text-white rounded-xl px-4 py-3 shadow-2xl transition-all">
           <span className="text-xs text-gray-300 max-w-[160px] truncate">{undoPendente.descricao}</span>
           <button
             onClick={executarUndo}

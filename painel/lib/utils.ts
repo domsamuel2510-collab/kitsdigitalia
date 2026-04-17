@@ -77,14 +77,18 @@ export function normalizarClientes(clientes: Cliente[]): Cliente[] {
   });
 }
 
-export function fmtData(iso: string): string {
+export function fmtData(iso: string | null | undefined): string {
+  if (!iso) return '—';
   const [y, m, d] = iso.split('-');
+  if (!y || !m || !d) return '—';
   return `${d}/${m}/${y}`;
 }
 
 /** Formato curto para a tabela: DD/MM/AA (ano com 2 dígitos) */
-export function fmtDataCurta(iso: string): string {
+export function fmtDataCurta(iso: string | null | undefined): string {
+  if (!iso) return '—';
   const [y, m, d] = iso.split('-');
+  if (!y || !m || !d) return '—';
   return `${d}/${m}/${y.slice(2)}`;
 }
 
