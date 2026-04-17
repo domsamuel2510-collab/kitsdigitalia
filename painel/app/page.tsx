@@ -164,7 +164,7 @@ export default function Dashboard() {
 
   return (
     <>
-      <div className="space-y-5">
+      <div className="space-y-3">
 
         {/* Banner de atenção geral */}
         {(precisamAtencao.length > 0 || ativacosPendentes.length > 0) && (

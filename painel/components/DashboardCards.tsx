@@ -43,7 +43,7 @@ interface Props {
 
 export function DashboardCards({ clientes, filtroAtivo, onFiltrar }: Props) {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
       {CARDS.map(({ label, color, bg, border, borderSel, statuses, filtroValue }) => {
         const total     = clientes.filter(c => statuses.includes(c.status)).length;
         const selecionado = filtroAtivo === filtroValue;
@@ -54,15 +54,15 @@ export function DashboardCards({ clientes, filtroAtivo, onFiltrar }: Props) {
             type="button"
             onClick={() => onFiltrar(selecionado ? 'todos' : filtroValue)}
             className={[
-              'rounded-xl border p-4 text-left transition-all duration-150 select-none',
+              'rounded-lg border p-3 text-left transition-all duration-150 select-none',
               bg,
               selecionado ? borderSel + ' shadow-md' : border + ' hover:shadow-sm hover:brightness-95',
             ].join(' ')}
           >
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</p>
-            <p className={`text-4xl font-bold mt-1 ${color}`}>{total}</p>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide leading-none">{label}</p>
+            <p className={`text-2xl font-bold mt-1 leading-none ${color}`}>{total}</p>
             {selecionado && (
-              <p className="text-xs mt-1 text-gray-400">clique para limpar</p>
+              <p className="text-xs mt-1 text-gray-400">limpar ×</p>
             )}
           </button>
         );

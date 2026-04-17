@@ -82,6 +82,12 @@ export function fmtData(iso: string): string {
   return `${d}/${m}/${y}`;
 }
 
+/** Formato curto para a tabela: DD/MM/AA (ano com 2 dígitos) */
+export function fmtDataCurta(iso: string): string {
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y.slice(2)}`;
+}
+
 export function whatsappLink(numero: string): string {
   const limpo = numero.replace(/\D/g, '');
   return `https://wa.me/${limpo}`;
