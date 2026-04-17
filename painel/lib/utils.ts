@@ -43,11 +43,38 @@ export function diasSemContato(ultimaTentativa: string | null): number {
 }
 
 export function calcularStatus(diasRestantes: number, renovadoEm: string | null): Status {
-  if (renovadoEm) return 'renovado';
-  if (diasRestantes > 2)   return 'ativo';
-  if (diasRestantes >= 1)  return 'vence_em_breve';
-  if (diasRestantes === 0) return 'vence_hoje';
-  return 'vencido';
+  if (renovadoEm)           return 'renovado';
+  if (diasRestantes > 2)    return 'ativo';
+  if (diasRestantes >= 1)   return 'vence_em_breve'; // 1 ou 2 dias
+  if (diasRestantes === 0)  return 'vence_hoje';
+  return 'vencido';                                   // < 0
+}
+
+/**
+ * Recalcula dias_restantes e status no frontend para todos os clientes.
+ * Garante que a contagem seja baseada em new Date() (hoje), independente
+ * do valor armazenado no Supabase, que pode estar desatualizado se a
+ * função SQL atualizar_status_todos() não tiver rodado.
+ *
+ * - Preserva 'reabordagem': status manual definido pelo usuário
+ * - Usa T00:00:00 no parse de datas para evitar offset de fuso horário
+ */
+export function normalizarClientes(clientes: Cliente[]): Cliente[] {
+  const agora = new Date();
+  agora.setHours(0, 0, 0, 0);
+
+  return clientes.map(c => {
+    // Reabordagem é manual — nunca sobrescrever
+    if (c.status === 'reabordagem') return c;
+
+    const venc = new Date(c.data_vencimento + 'T00:00:00');
+    const diasRestantes = isNaN(venc.getTime())
+      ? c.dias_restantes                              // fallback se data inválida
+      : Math.round((venc.getTime() - agora.getTime()) / 86_400_000);
+    const status = calcularStatus(diasRestantes, c.renovado_em);
+
+    return { ...c, dias_restantes: diasRestantes, status };
+  });
 }
 
 export function fmtData(iso: string): string {

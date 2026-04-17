@@ -11,7 +11,7 @@ import { RespostaClienteModal } from '@/components/RespostaClienteModal';
 import { EditarClienteModal } from '@/components/EditarClienteModal';
 import { HistoricoContatoDrawer } from '@/components/HistoricoContatoDrawer';
 import { ConfirmarAtivacaoModal } from '@/components/ConfirmarAtivacaoModal';
-import { ordenarPorUrgencia, precisaAtencao } from '@/lib/utils';
+import { ordenarPorUrgencia, precisaAtencao, normalizarClientes } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
 const STATUS_LABELS: Record<string, string> = {
@@ -39,11 +39,23 @@ export default function Dashboard() {
 
   const carregar = useCallback(async () => {
     setLoading(true);
-    await supabase.rpc('atualizar_status_todos').maybeSingle();
+
+    // Tenta atualizar o status no banco (pg_cron pode não estar ativo)
+    // Não usa .maybeSingle() pois a função retorna void
+    await supabase.rpc('atualizar_status_todos').then(
+      ({ error }) => { if (error) console.warn('[rpc] atualizar_status_todos:', error.message); }
+    );
 
     const { data, error } = await supabase.from('clientes').select('*');
-    if (error) { toast.error('Erro ao carregar: ' + error.message); }
-    else setClientes((data as Cliente[]) ?? []);
+    if (error) {
+      toast.error('Erro ao carregar: ' + error.message);
+    } else {
+      // Recalcula dias_restantes e status no frontend com base em hoje,
+      // garantindo que clientes vencidos apareçam corretamente mesmo que
+      // o Supabase tenha valores desatualizados (coluna STORED não atualiza sozinha).
+      setClientes(normalizarClientes((data as Cliente[]) ?? []));
+    }
+
     setLoading(false);
   }, []);
 
