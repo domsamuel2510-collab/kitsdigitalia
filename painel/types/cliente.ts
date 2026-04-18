@@ -15,13 +15,13 @@ export type RespostaCliente =
 export interface Cliente {
   id: string;
   nome: string;
-  email: string;
-  whatsapp: string;
+  email: string | null;              // pode ser null em cadastros antigos/incompletos
+  whatsapp: string | null;           // pode ser null em cadastros antigos/incompletos
   produto: string;
   plano: string | null;              // 'mensal' | 'trimestral' | 'semestral' | 'anual'
-  pais: string;                      // 'Brasil' | 'Exterior'
-  data_compra: string;
-  data_vencimento: string;
+  pais: string | null;               // 'Brasil' | 'Exterior'
+  data_compra: string | null;
+  data_vencimento: string | null;
   dias_restantes: number;
   status: Status;
   msg_confirmacao: string | null;
@@ -35,5 +35,6 @@ export interface Cliente {
   tentativas_contato: number;
   ultima_tentativa: string | null;
   resposta_cliente: RespostaCliente | null;
+  proxima_renovacao_mensal: string | null; // só para planos trimestral/semestral/anual
   created_at: string;
 }

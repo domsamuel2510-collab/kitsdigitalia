@@ -1,17 +1,31 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Cliente } from '@/types/cliente';
 import { RenovarModal } from '@/components/RenovarModal';
 import { RespostaClienteModal } from '@/components/RespostaClienteModal';
 import {
-  fmtData, gerarMsgReabordagemBrasil, gerarMsgReabordagemExterior,
-  whatsappLink, diasSemContato,
+  fmtData, whatsappLink, diasSemContato,
+  MSG_TEMPLATE_REABORDAGEM_BRASIL, MSG_TEMPLATE_REABORDAGEM_EXTERIOR,
 } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
 type Aba = 'brasil' | 'exterior';
+
+/** Interpola {nome} e {produto} em um template editável */
+function interpolar(template: string, nome: string, produto: string): string {
+  return template.replace(/{nome}/g, nome).replace(/{produto}/g, produto);
+}
+
+const RESPOSTA_LABELS: Record<string, string> = {
+  respondeu:    '💬 Respondeu',
+  vai_renovar:  '✅ Vai renovar',
+  nao_respondeu:'🔕 Não respondeu',
+  nao_quer_mais:'❌ Não quer mais',
+};
 
 export default function ReabordagemPage() {
   const [clientes,       setClientes]       = useState<Cliente[]>([]);
@@ -20,6 +34,11 @@ export default function ReabordagemPage() {
   const [clienteRenovar, setClienteRenovar] = useState<Cliente | null>(null);
   const [clienteResp,    setClienteResp]    = useState<Cliente | null>(null);
   const [copiados,       setCopiados]       = useState<Record<string, boolean>>({});
+
+  // Templates editáveis por aba
+  const [templateBrasil,   setTemplateBrasil]   = useState(MSG_TEMPLATE_REABORDAGEM_BRASIL);
+  const [templateExterior, setTemplateExterior] = useState(MSG_TEMPLATE_REABORDAGEM_EXTERIOR);
+  const [editandoTemplate, setEditandoTemplate] = useState(false);
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -40,16 +59,28 @@ export default function ReabordagemPage() {
   const exterior = clientes.filter(c => c.pais && c.pais !== 'Brasil');
   const visiveis = aba === 'brasil' ? brasil : exterior;
 
-  function gerarMsg(c: Cliente) {
-    return aba === 'brasil'
-      ? gerarMsgReabordagemBrasil(c.nome, c.produto)
-      : gerarMsgReabordagemExterior(c.nome, c.produto);
+  const template       = aba === 'brasil' ? templateBrasil : templateExterior;
+  const setTemplate    = aba === 'brasil' ? setTemplateBrasil : setTemplateExterior;
+  const templatePadrao = aba === 'brasil' ? MSG_TEMPLATE_REABORDAGEM_BRASIL : MSG_TEMPLATE_REABORDAGEM_EXTERIOR;
+
+  function gerarMsg(c: Cliente): string {
+    return interpolar(template, c.nome, c.produto);
   }
 
   function copiar(c: Cliente) {
     navigator.clipboard.writeText(gerarMsg(c)).then(() => {
       setCopiados(prev => ({ ...prev, [c.id]: true }));
       setTimeout(() => setCopiados(prev => ({ ...prev, [c.id]: false })), 2000);
+    });
+  }
+
+  function copiarParaTodos() {
+    if (!visiveis.length) return;
+    const tudo = visiveis
+      .map(c => `--- ${c.nome} (${c.produto}) ---\n${gerarMsg(c)}`)
+      .join('\n\n');
+    navigator.clipboard.writeText(tudo).then(() => {
+      toast.success(`${visiveis.length} mensagem${visiveis.length > 1 ? 'ns' : ''} copiada${visiveis.length > 1 ? 's' : ''}!`);
     });
   }
 
@@ -76,9 +107,7 @@ export default function ReabordagemPage() {
           <button
             onClick={() => setAba('brasil')}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              aba === 'brasil'
-                ? 'bg-white shadow text-gray-900'
-                : 'text-gray-500 hover:text-gray-700'
+              aba === 'brasil' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'
             }`}
           >
             🇧🇷 Brasil ({brasil.length})
@@ -86,15 +115,67 @@ export default function ReabordagemPage() {
           <button
             onClick={() => setAba('exterior')}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              aba === 'exterior'
-                ? 'bg-white shadow text-gray-900'
-                : 'text-gray-500 hover:text-gray-700'
+              aba === 'exterior' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'
             }`}
           >
             🌍 Exterior ({exterior.length})
           </button>
         </div>
 
+        {/* Template de mensagem editável */}
+        <div className={`rounded-xl border p-4 space-y-2 ${
+          aba === 'brasil' ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-200'
+        }`}>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-gray-700">
+              📝 Template de mensagem — use <code className="bg-white px-1 rounded">{'{nome}'}</code> e <code className="bg-white px-1 rounded">{'{produto}'}</code>
+            </span>
+            <div className="flex gap-1.5">
+              {template !== templatePadrao && (
+                <button
+                  onClick={() => setTemplate(templatePadrao)}
+                  className="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-white text-gray-500"
+                >
+                  ↩ Restaurar padrão
+                </button>
+              )}
+              <button
+                onClick={() => setEditandoTemplate(p => !p)}
+                className="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-white text-gray-600 font-medium"
+              >
+                {editandoTemplate ? '🔒 Fechar edição' : '✏️ Editar template'}
+              </button>
+            </div>
+          </div>
+
+          {editandoTemplate ? (
+            <textarea
+              value={template}
+              onChange={e => setTemplate(e.target.value)}
+              rows={7}
+              className="w-full text-xs font-mono rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none bg-white"
+            />
+          ) : (
+            <pre className="text-xs font-mono whitespace-pre-wrap break-words text-gray-700 bg-white rounded-lg border border-gray-200 px-3 py-2 max-h-36 overflow-y-auto">
+              {template}
+            </pre>
+          )}
+
+          {visiveis.length > 0 && (
+            <button
+              onClick={copiarParaTodos}
+              className={`w-full py-2 text-xs font-semibold rounded-lg transition-colors ${
+                aba === 'brasil'
+                  ? 'bg-green-600 hover:bg-green-700 text-white'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+            >
+              📋 Copiar para todos ({visiveis.length} mensagem{visiveis.length > 1 ? 'ns' : ''})
+            </button>
+          )}
+        </div>
+
+        {/* Lista */}
         {loading ? (
           <div className="text-center py-16 text-gray-400">Carregando…</div>
         ) : !visiveis.length ? (
@@ -104,8 +185,9 @@ export default function ReabordagemPage() {
         ) : (
           <div className="space-y-3">
             {visiveis.map(c => {
-              const dsc = diasSemContato(c.ultima_tentativa);
+              const dsc       = diasSemContato(c.ultima_tentativa);
               const tentativas = c.tentativas_contato ?? 0;
+              const msg        = gerarMsg(c);
 
               return (
                 <div key={c.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
@@ -124,7 +206,6 @@ export default function ReabordagemPage() {
                         {c.produto} · venceu {fmtData(c.data_vencimento)} · {c.whatsapp}
                       </p>
 
-                      {/* Contexto */}
                       <div className="mt-1.5 flex flex-wrap gap-3 text-xs text-gray-500">
                         <span>📊 Tentativas: <strong>{tentativas}</strong></span>
                         <span>📅 Sem contato: <strong>{dsc >= 999 ? 'nunca' : `${dsc}d`}</strong></span>
@@ -136,13 +217,13 @@ export default function ReabordagemPage() {
                         )}
                       </div>
 
-                      {/* Mensagem */}
+                      {/* Mensagem personalizada com o template atual */}
                       <pre className={`mt-2 border rounded-lg p-2.5 text-xs font-mono whitespace-pre-wrap break-words ${
                         aba === 'brasil'
                           ? 'bg-green-50 border-green-100 text-gray-800'
                           : 'bg-blue-50 border-blue-100 text-gray-800'
                       }`}>
-                        {gerarMsg(c)}
+                        {msg}
                       </pre>
                     </div>
 
@@ -207,10 +288,3 @@ export default function ReabordagemPage() {
     </>
   );
 }
-
-const RESPOSTA_LABELS: Record<string, string> = {
-  respondeu:    '💬 Respondeu',
-  vai_renovar:  '✅ Vai renovar',
-  nao_respondeu:'🔕 Não respondeu',
-  nao_quer_mais:'❌ Não quer mais',
-};

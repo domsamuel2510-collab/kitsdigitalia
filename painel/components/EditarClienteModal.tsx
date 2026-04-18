@@ -12,19 +12,20 @@ interface Props {
   cliente: Cliente;
   onClose: () => void;
   onSaved: () => void;
+  campoFoco?: 'email' | 'whatsapp'; // abre o modal com foco no campo indicado
 }
 
-export function EditarClienteModal({ cliente, onClose, onSaved }: Props) {
+export function EditarClienteModal({ cliente, onClose, onSaved, campoFoco }: Props) {
   const [form, setForm] = useState({
-    nome:                cliente.nome,
-    email:               cliente.email,
-    whatsapp:            cliente.whatsapp,
-    produto:             cliente.produto,
+    nome:                cliente.nome ?? '',
+    email:               cliente.email ?? '',
+    whatsapp:            cliente.whatsapp ?? '',
+    produto:             cliente.produto ?? '',
     plano:               cliente.plano ?? 'mensal',
     pais:                cliente.pais ?? 'Brasil',
     observacoes:         cliente.observacoes ?? '',
-    data_compra:         cliente.data_compra,
-    data_vencimento:     cliente.data_vencimento,
+    data_compra:         cliente.data_compra ?? '',
+    data_vencimento:     cliente.data_vencimento ?? '',
     data_ativacao:       cliente.data_ativacao ?? '',
     ativacao_confirmada: cliente.ativacao_confirmada ?? false,
   });
@@ -93,10 +94,21 @@ export function EditarClienteModal({ cliente, onClose, onSaved }: Props) {
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Email *">
-              <input type="email" value={form.email} onChange={e => set('email', e.target.value)} className={INPUT} />
+              <input
+                type="email"
+                autoFocus={campoFoco === 'email'}
+                value={form.email}
+                onChange={e => set('email', e.target.value)}
+                className={campoFoco === 'email' ? `${INPUT} ring-2 ring-orange-400` : INPUT}
+              />
             </Field>
             <Field label="WhatsApp *">
-              <input value={form.whatsapp} onChange={e => set('whatsapp', e.target.value)} className={INPUT} />
+              <input
+                autoFocus={campoFoco === 'whatsapp'}
+                value={form.whatsapp}
+                onChange={e => set('whatsapp', e.target.value)}
+                className={campoFoco === 'whatsapp' ? `${INPUT} ring-2 ring-orange-400` : INPUT}
+              />
             </Field>
           </div>
 
