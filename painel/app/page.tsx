@@ -47,6 +47,7 @@ export default function Dashboard() {
   const [busca,    setBusca]    = useState('');
 
   const [erroCarregar,  setErroCarregar]  = useState<string | null>(null);
+  const [erroRender,    setErroRender]    = useState<string | null>(null);
 
   const [showAdicionar,    setShowAdicionar]    = useState(false);
   const [clienteRenovar,   setClienteRenovar]   = useState<Cliente | null>(null);
@@ -110,6 +111,26 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => { carregar(); }, [carregar]);
+
+  // Captura erros JS não tratados e os torna visíveis na tela
+  useEffect(() => {
+    function onError(e: ErrorEvent) {
+      const msg = `${e.message} (${e.filename}:${e.lineno})`;
+      console.error('[window.onerror]', msg, e.error);
+      setErroRender(msg);
+    }
+    function onUnhandled(e: PromiseRejectionEvent) {
+      const msg = String(e.reason);
+      console.error('[unhandledrejection]', msg);
+      setErroRender(msg);
+    }
+    window.addEventListener('error', onError);
+    window.addEventListener('unhandledrejection', onUnhandled);
+    return () => {
+      window.removeEventListener('error', onError);
+      window.removeEventListener('unhandledrejection', onUnhandled);
+    };
+  }, []);
 
   // ---- Ações ----
 
@@ -176,6 +197,33 @@ export default function Dashboard() {
     if (filtro === 'incompletos') return ordenarIncompletos(base);
     return ordenarPorUrgencia(base);
   })();
+
+  // Render-level error banner (capturado por window.onerror)
+  if (erroRender) {
+    return (
+      <div className="rounded-xl border border-red-300 bg-red-50 p-6 mt-4 flex flex-col gap-3">
+        <div className="flex items-start gap-3">
+          <span className="text-2xl">💥</span>
+          <div>
+            <p className="font-bold text-red-800">Erro JavaScript detectado</p>
+            <pre className="text-sm text-red-700 mt-1 whitespace-pre-wrap break-words font-mono bg-red-100 rounded p-2">{erroRender}</pre>
+            <p className="text-xs text-red-500 mt-2">Verifique o Console do browser (F12) para o stack trace completo.</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => { setErroRender(null); carregar(); }}
+            className="px-4 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium"
+          >
+            🔄 Tentar novamente
+          </button>
+          <a href="/teste" className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 text-gray-700">
+            Página de diagnóstico
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

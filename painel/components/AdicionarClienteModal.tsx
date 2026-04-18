@@ -10,21 +10,24 @@ interface Props {
   onSaved: (clienteId: string) => void;
 }
 
-const dataVencInicial = addDias(hoje(), diasDoPlano('mensal'));
-
 export function AdicionarClienteModal({ onClose, onSaved }: Props) {
-  const [form, setForm] = useState({
-    nome:                '',
-    email:               '',
-    whatsapp:            '',
-    produto:             PRODUTOS[0],
-    pais:                'Brasil',
-    plano:               'mensal',
-    data_compra:         hoje(),
-    data_vencimento:     dataVencInicial,
-    ativacao_confirmada: false,
-    data_ativacao:       hoje(),
-    observacoes:         '',
+  // Calculado dentro do componente para evitar execução em nível de módulo durante SSR
+  const [form, setForm] = useState(() => {
+    const dataCompra  = hoje();
+    const dataVenc    = addDias(dataCompra, diasDoPlano('mensal'));
+    return {
+      nome:                '',
+      email:               '',
+      whatsapp:            '',
+      produto:             PRODUTOS[0],
+      pais:                'Brasil',
+      plano:               'mensal',
+      data_compra:         dataCompra,
+      data_vencimento:     dataVenc,
+      ativacao_confirmada: false,
+      data_ativacao:       dataCompra,
+      observacoes:         '',
+    };
   });
   const [loading, setLoading] = useState(false);
 
