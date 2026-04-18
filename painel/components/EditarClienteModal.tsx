@@ -17,10 +17,10 @@ interface Props {
 
 export function EditarClienteModal({ cliente, onClose, onSaved, campoFoco }: Props) {
   const [form, setForm] = useState({
-    nome:                cliente.nome,
-    email:               cliente.email,
-    whatsapp:            cliente.whatsapp,
-    produto:             cliente.produto,
+    nome:                cliente.nome ?? '',
+    email:               cliente.email ?? '',
+    whatsapp:            cliente.whatsapp ?? '',
+    produto:             cliente.produto ?? '',
     plano:               cliente.plano ?? 'mensal',
     pais:                cliente.pais ?? 'Brasil',
     observacoes:         cliente.observacoes ?? '',

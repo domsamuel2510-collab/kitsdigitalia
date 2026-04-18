@@ -135,41 +135,53 @@ export default function Dashboard() {
   // ---- Ações ----
 
   async function marcarReabordagem(c: Cliente) {
-    const anterior = c;
-    const { error } = await supabase
-      .from('clientes')
-      .update({ status: 'reabordagem' })
-      .eq('id', c.id);
-    if (error) { toast.error('Erro: ' + error.message); return; }
-    toast.success(`${c.nome} movido para reabordagem`);
-    registrarUndo({
-      descricao: `Mover ${c.nome} para reabordagem`,
-      reverter: async () => {
-        await supabase.from('clientes').update({ status: anterior.status }).eq('id', anterior.id);
-      },
-    });
-    carregar();
+    try {
+      const anterior = c;
+      const { error } = await supabase
+        .from('clientes')
+        .update({ status: 'reabordagem' })
+        .eq('id', c.id);
+      if (error) { toast.error('Erro: ' + error.message); return; }
+      toast.success(`${c.nome} movido para reabordagem`);
+      registrarUndo({
+        descricao: `Mover ${c.nome} para reabordagem`,
+        reverter: async () => {
+          await supabase.from('clientes').update({ status: anterior.status }).eq('id', anterior.id);
+        },
+      });
+      carregar();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('[marcarReabordagem]', msg);
+      toast.error('Erro inesperado: ' + msg);
+    }
   }
 
   async function renovacaoMensalFeita(c: Cliente) {
     if (!c.proxima_renovacao_mensal) return;
-    const novaData = addDias(c.proxima_renovacao_mensal, 30);
-    const anterior = c;
-    const { error } = await supabase
-      .from('clientes')
-      .update({ proxima_renovacao_mensal: novaData })
-      .eq('id', c.id);
-    if (error) { toast.error('Erro: ' + error.message); return; }
-    toast.success(`Próxima renovação de ${c.nome}: ${fmtData(novaData)}`);
-    registrarUndo({
-      descricao: `Renovação mensal de ${c.nome}`,
-      reverter: async () => {
-        await supabase.from('clientes')
-          .update({ proxima_renovacao_mensal: anterior.proxima_renovacao_mensal })
-          .eq('id', anterior.id);
-      },
-    });
-    carregar();
+    try {
+      const novaData = addDias(c.proxima_renovacao_mensal, 30);
+      const anterior = c;
+      const { error } = await supabase
+        .from('clientes')
+        .update({ proxima_renovacao_mensal: novaData })
+        .eq('id', c.id);
+      if (error) { toast.error('Erro: ' + error.message); return; }
+      toast.success(`Próxima renovação de ${c.nome}: ${fmtData(novaData)}`);
+      registrarUndo({
+        descricao: `Renovação mensal de ${c.nome}`,
+        reverter: async () => {
+          await supabase.from('clientes')
+            .update({ proxima_renovacao_mensal: anterior.proxima_renovacao_mensal })
+            .eq('id', anterior.id);
+        },
+      });
+      carregar();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('[renovacaoMensalFeita]', msg);
+      toast.error('Erro inesperado: ' + msg);
+    }
   }
 
   // ---- Dados derivados ----
@@ -187,10 +199,10 @@ export default function Dashboard() {
         || (grupo ? grupo.includes(c.status) : c.status === filtro);
       const matchIncompleto = filtro !== 'incompletos' || cadastroIncompleto(c);
       const matchBusca = !busca ||
-        c.nome.toLowerCase().includes(busca.toLowerCase()) ||
-        (c.email  ?? '').toLowerCase().includes(busca.toLowerCase()) ||
+        (c.nome    ?? '').toLowerCase().includes(busca.toLowerCase()) ||
+        (c.email   ?? '').toLowerCase().includes(busca.toLowerCase()) ||
         (c.whatsapp ?? '').includes(busca) ||
-        c.produto.toLowerCase().includes(busca.toLowerCase());
+        (c.produto ?? '').toLowerCase().includes(busca.toLowerCase());
       return matchFiltro && matchIncompleto && matchBusca;
     });
     // Ordenação especial para filtro incompletos

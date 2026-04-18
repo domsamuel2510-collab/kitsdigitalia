@@ -15,11 +15,11 @@ export type RespostaCliente =
 export interface Cliente {
   id: string;
   nome: string;
-  email: string;
-  whatsapp: string;
+  email: string | null;              // pode ser null em cadastros antigos/incompletos
+  whatsapp: string | null;           // pode ser null em cadastros antigos/incompletos
   produto: string;
   plano: string | null;              // 'mensal' | 'trimestral' | 'semestral' | 'anual'
-  pais: string;                      // 'Brasil' | 'Exterior'
+  pais: string | null;               // 'Brasil' | 'Exterior'
   data_compra: string | null;
   data_vencimento: string | null;
   dias_restantes: number;

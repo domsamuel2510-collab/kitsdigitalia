@@ -103,8 +103,10 @@ export function fmtDataCurta(iso: string | null | undefined): string {
   return `${d}/${m}/${y.slice(2)}`;
 }
 
-export function whatsappLink(numero: string): string {
+export function whatsappLink(numero: string | null | undefined): string {
+  if (!numero) return '#';
   const limpo = numero.replace(/\D/g, '');
+  if (!limpo) return '#';
   return `https://wa.me/${limpo}`;
 }
 
@@ -113,12 +115,12 @@ export function whatsappLink(numero: string): string {
 export function gerarMsgConfirmacao(
   nome: string,
   produto: string,
-  email: string,
-  whatsapp: string,
+  email: string | null | undefined,
+  whatsapp: string | null | undefined,
   dataCompra: string | null | undefined,
   dataVencimento: string | null | undefined,
 ): string {
-  return `Olá, ${nome}! Tudo bem? 😊\n\n✅ Seu acesso ao ${produto} foi ativado com sucesso!\n\n📅 Data de início: ${fmtData(dataCompra)}\n⏳ Válido até: ${fmtData(dataVencimento)}\n✉️ Email cadastrado: ${email}\n\nQualquer dúvida é só chamar. Aproveite! 🚀`;
+  return `Olá, ${nome}! Tudo bem? 😊\n\n✅ Seu acesso ao ${produto} foi ativado com sucesso!\n\n📅 Data de início: ${fmtData(dataCompra)}\n⏳ Válido até: ${fmtData(dataVencimento)}\n✉️ Email cadastrado: ${email ?? '—'}\n\nQualquer dúvida é só chamar. Aproveite! 🚀`;
 }
 
 // ---- Mensagens de cobrança (contextuais) ----
