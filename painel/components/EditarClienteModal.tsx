@@ -24,8 +24,8 @@ export function EditarClienteModal({ cliente, onClose, onSaved, campoFoco }: Pro
     plano:               cliente.plano ?? 'mensal',
     pais:                cliente.pais ?? 'Brasil',
     observacoes:         cliente.observacoes ?? '',
-    data_compra:         cliente.data_compra,
-    data_vencimento:     cliente.data_vencimento,
+    data_compra:         cliente.data_compra ?? '',
+    data_vencimento:     cliente.data_vencimento ?? '',
     data_ativacao:       cliente.data_ativacao ?? '',
     ativacao_confirmada: cliente.ativacao_confirmada ?? false,
   });

@@ -60,18 +60,29 @@ export function calcularStatus(diasRestantes: number, renovadoEm: string | null)
  * - Usa T00:00:00 no parse de datas para evitar offset de fuso horário
  */
 export function normalizarClientes(clientes: Cliente[]): Cliente[] {
+  if (!Array.isArray(clientes)) return [];
+
   const agora = new Date();
   agora.setHours(0, 0, 0, 0);
 
   return clientes.map(c => {
+    // Guard: cliente inválido ou sem id
+    if (!c || !c.id) return c;
+
     // Reabordagem é manual — nunca sobrescrever
     if (c.status === 'reabordagem') return c;
 
-    const venc = new Date(c.data_vencimento + 'T00:00:00');
-    const diasRestantes = isNaN(venc.getTime())
-      ? c.dias_restantes                              // fallback se data inválida
-      : Math.round((venc.getTime() - agora.getTime()) / 86_400_000);
-    const status = calcularStatus(diasRestantes, c.renovado_em);
+    // data_vencimento pode vir null/undefined do banco em dados antigos
+    const dataStr = c.data_vencimento ?? '';
+    const venc = dataStr ? new Date(dataStr + 'T00:00:00') : null;
+
+    const diasRestantes = (venc && !isNaN(venc.getTime()))
+      ? Math.round((venc.getTime() - agora.getTime()) / 86_400_000)
+      : (typeof c.dias_restantes === 'number' && !isNaN(c.dias_restantes)
+          ? c.dias_restantes
+          : 0);                                       // fallback seguro
+
+    const status = calcularStatus(diasRestantes, c.renovado_em ?? null);
 
     return { ...c, dias_restantes: diasRestantes, status };
   });
@@ -104,8 +115,8 @@ export function gerarMsgConfirmacao(
   produto: string,
   email: string,
   whatsapp: string,
-  dataCompra: string,
-  dataVencimento: string,
+  dataCompra: string | null | undefined,
+  dataVencimento: string | null | undefined,
 ): string {
   return `Olá, ${nome}! Tudo bem? 😊\n\n✅ Seu acesso ao ${produto} foi ativado com sucesso!\n\n📅 Data de início: ${fmtData(dataCompra)}\n⏳ Válido até: ${fmtData(dataVencimento)}\n✉️ Email cadastrado: ${email}\n\nQualquer dúvida é só chamar. Aproveite! 🚀`;
 }
@@ -116,15 +127,16 @@ export function gerarMsgCobranca(
   nome: string,
   produto: string,
   dias: number,
-  dataVencimento: string,
+  dataVencimento: string | null | undefined,
 ): string {
+  const dataFmt = fmtData(dataVencimento);
   if (dias === 0) {
-    return `Olá, ${nome}! Tudo bem? 😊\n\nSeu acesso ao ${produto} expira HOJE (${fmtData(dataVencimento)})! ⚠️\n\nPara não ficar sem acesso, renova agora. Me chama aqui! 🔥`;
+    return `Olá, ${nome}! Tudo bem? 😊\n\nSeu acesso ao ${produto} expira HOJE (${dataFmt})! ⚠️\n\nPara não ficar sem acesso, renova agora. Me chama aqui! 🔥`;
   }
   if (dias < 0) {
-    return `Olá, ${nome}! Tudo bem? 😊\n\nNotei que seu acesso ao ${produto} expirou no dia ${fmtData(dataVencimento)}. 😕\n\nQue tal renovar e voltar a aproveitar? Me chama aqui! 🔥`;
+    return `Olá, ${nome}! Tudo bem? 😊\n\nNotei que seu acesso ao ${produto} expirou no dia ${dataFmt}. 😕\n\nQue tal renovar e voltar a aproveitar? Me chama aqui! 🔥`;
   }
-  return `Olá, ${nome}! Tudo bem? 😊\n\nPassando para te lembrar que seu acesso ao ${produto} vai expirar em ${dias} dia${dias > 1 ? 's' : ''}, no dia ${fmtData(dataVencimento)}.\n\nBora renovar para não perder o acesso? Me chama aqui! 🔥`;
+  return `Olá, ${nome}! Tudo bem? 😊\n\nPassando para te lembrar que seu acesso ao ${produto} vai expirar em ${dias} dia${dias > 1 ? 's' : ''}, no dia ${dataFmt}.\n\nBora renovar para não perder o acesso? Me chama aqui! 🔥`;
 }
 
 // ---- Mensagens de reabordagem ----

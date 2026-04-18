@@ -46,6 +46,8 @@ export default function Dashboard() {
   const [filtro,   setFiltro]   = useState<string>('todos');
   const [busca,    setBusca]    = useState('');
 
+  const [erroCarregar,  setErroCarregar]  = useState<string | null>(null);
+
   const [showAdicionar,    setShowAdicionar]    = useState(false);
   const [clienteRenovar,   setClienteRenovar]   = useState<Cliente | null>(null);
   const [clienteResposta,  setClienteResposta]  = useState<Cliente | null>(null);
@@ -81,16 +83,27 @@ export default function Dashboard() {
 
   const carregar = useCallback(async () => {
     setLoading(true);
+    setErroCarregar(null);
 
-    await supabase.rpc('atualizar_status_todos').then(
-      ({ error }) => { if (error) console.warn('[rpc] atualizar_status_todos:', error.message); }
-    );
+    try {
+      // Atualiza status no banco (falhas aqui não são fatais)
+      const rpc = await supabase.rpc('atualizar_status_todos');
+      if (rpc.error) console.warn('[rpc] atualizar_status_todos:', rpc.error.message);
 
-    const { data, error } = await supabase.from('clientes').select('*');
-    if (error) {
-      toast.error('Erro ao carregar: ' + error.message);
-    } else {
-      setClientes(normalizarClientes((data as Cliente[]) ?? []));
+      const { data, error } = await supabase.from('clientes').select('*');
+      if (error) {
+        const msg = 'Erro ao carregar clientes: ' + error.message;
+        console.error('[carregar]', msg);
+        setErroCarregar(msg);
+        toast.error(msg);
+      } else {
+        setClientes(normalizarClientes((data as Cliente[]) ?? []));
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('[carregar] exceção inesperada:', msg);
+      setErroCarregar('Erro inesperado: ' + msg);
+      toast.error('Erro inesperado ao carregar dados');
     }
 
     setLoading(false);
@@ -293,9 +306,28 @@ export default function Dashboard() {
           </select>
         </div>
 
+        {erroCarregar && (
+          <div className="rounded-xl border border-red-300 bg-red-50 p-5 flex flex-col gap-3">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">⚠️</span>
+              <div>
+                <p className="font-semibold text-red-800">Falha ao carregar dados</p>
+                <p className="text-sm text-red-700 mt-0.5">{erroCarregar}</p>
+                <p className="text-xs text-red-500 mt-1">Verifique a conexão e as variáveis de ambiente do Supabase.</p>
+              </div>
+            </div>
+            <button
+              onClick={carregar}
+              className="self-start px-4 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium"
+            >
+              🔄 Tentar novamente
+            </button>
+          </div>
+        )}
+
         {loading ? (
           <div className="text-center py-16 text-gray-400">Carregando…</div>
-        ) : (
+        ) : !erroCarregar && (
           <ClienteTable
             clientes={filtrados}
             onRenovar={setClienteRenovar}

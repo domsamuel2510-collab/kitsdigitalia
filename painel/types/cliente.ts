@@ -20,8 +20,8 @@ export interface Cliente {
   produto: string;
   plano: string | null;              // 'mensal' | 'trimestral' | 'semestral' | 'anual'
   pais: string;                      // 'Brasil' | 'Exterior'
-  data_compra: string;
-  data_vencimento: string;
+  data_compra: string | null;
+  data_vencimento: string | null;
   dias_restantes: number;
   status: Status;
   msg_confirmacao: string | null;
