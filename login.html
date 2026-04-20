@@ -185,7 +185,7 @@
       if (pass.length < 6) return showError('A senha precisa ter pelo menos 6 caracteres.');
       btn.disabled = true; btn.textContent = '⏳ Criando conta...';
       const { error } = await sb.auth.signUp({ email, password: pass, options: { emailRedirectTo: 'https://kitsdigitalia.com/pages/products.html' } });
-      if (error) { showError(error.message); btn.disabled = false; btn.textContent = 'Criar conta →+; }
+     if (error) { showError(error.message); btn.disabled = false; btn.textContent = 'Criar conta →'; }
       else { showSuccess('✅ Conta criada! Verifique seu email para confirmar o cadastro.'); btn.disabled = false; btn.textContent = 'Criar conta →'; }
     });
     
