@@ -1,10 +1,9 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import { Toaster } from 'react-hot-toast';
 import { Navbar } from '@/components/Navbar';
 import './globals.css';
 
-const inter = Inter({ subsets: ['latin'] });
+// Inter é carregada via CSS em globals.css — sem dependência de rede no build.
 
 export const metadata: Metadata = {
   title: 'KitsDigitalia — Painel',
@@ -14,7 +13,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
-      <body className={`${inter.className} bg-gray-100 min-h-screen`}>
+      <body className="font-sans bg-gray-100 min-h-screen">
         <Navbar />
         <main className="max-w-7xl mx-auto px-4 py-3">{children}</main>
         <Toaster position="top-right" />

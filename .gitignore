@@ -1,0 +1,44 @@
+# Dependências
+node_modules/
+painel/node_modules/
+
+# Build Next.js
+.next/
+painel/.next/
+out/
+painel/out/
+
+# Vercel
+.vercel/
+
+# Variáveis de ambiente (NUNCA commitar)
+.env
+.env.local
+.env.*.local
+painel/.env
+painel/.env.local
+painel/.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Temporários / Operacionais
+*.zip
+*.tmp
+*.bak
+C:/Temp/
+
+# Claude worktrees — não são parte do projeto, não devem ir ao repositório
+.claude/worktrees/
+
+# IDE
+.vscode/
+.idea/
