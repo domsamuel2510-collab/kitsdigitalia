@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel de Usuários — KitsDigitalia</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: #0a0a0f; color: #e2e8f0; min-height: 100vh; }
+    
+    /* Header */
+    .header { background: #111118; border-bottom: 1px solid #1e1e2e; padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between; }
+    .header__logo { font-size: 1.1rem; font-weight: 800; color: #fff; }
+    .header__logo span { color: #ff6d00; }
+    .header__info { font-size: .8rem; color: #64748b; }
+    .btn-logout { background: transparent; border: 1px solid #1e1e2e; color: #94a3b8; padding: .4rem .9rem; border-radius: 6px; cursor: pointer; font-size: .8rem; transition: all .2s; }
+    .btn-logout:hover { border-color: #f87171; color: #f87171; }
+
+    /* Stats */
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; padding: 1.5rem 2rem; }
+    .stat { background: #111118; border: 1px solid #1e1e2e; border-radius: 12px; padding: 1.25rem; }
+    .stat__value { font-size: 2rem; font-weight: 800; color: #fff; }
+    .stat__label { font-size: .75rem; color: #64748b; margin-top: .25rem; }
+    .stat--orange .stat__value { color: #ff6d00; }
+    .stat--green .stat__value { color: #4ade80; }
+    .stat--blue .stat__value { color: #60a5fa; }
+
+    /* Toolbar */
+    .toolbar { padding: 0 2rem 1rem; display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }
+    .search { flex: 1; min-width: 200px; background: #111118; border: 1px solid #1e1e2e; border-radius: 8px; padding: .5rem 1rem; color: #e2e8f0; font-size: .875rem; outline: none; }
+    .search:focus { border-color: #ff6d00; }
+    .filter-btn { background: #111118; border: 1px solid #1e1e2e; color: #94a3b8; padding: .5rem 1rem; border-radius: 8px; cursor: pointer; font-size: .8rem; transition: all .2s; }
+    .filter-btn.active { background: rgba(255,109,0,.12); border-color: rgba(255,109,0,.4); color: #ff6d00; }
+    .count-badge { background: #1e1e2e; color: #94a3b8; padding: .25rem .6rem; border-radius: 20px; font-size: .75rem; margin-left: auto; }
+
+    /* Table */
+    .table-wrap { padding: 0 2rem 2rem; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+    th { text-align: left; padding: .75rem 1rem; background: #111118; border-bottom: 1px solid #1e1e2e; color: #64748b; font-weight: 600; font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; }
+    td { padding: .875rem 1rem; border-bottom: 1px solid #0f0f1a; vertical-align: middle; }
+    tr:hover td { background: #111118; }
+    .email { font-weight: 500; color: #e2e8f0; }
+    .provider-badge { display: inline-flex; align-items: center; gap: .3rem; padding: .2rem .6rem; border-radius: 20px; font-size: .72rem; font-weight: 600; }
+    .provider-google { background: rgba(66,133,244,.15); color: #60a5fa; }
+    .provider-email { background: rgba(255,109,0,.12); color: #fb923c; }
+    .date { color: #64748b; font-size: .8rem; }
+    .id { font-family: monospace; font-size: .72rem; color: #475569; }
+    .status-active { color: #4ade80; font-size: .75rem; font-weight: 600; }
+    .status-pending { color: #fbbf24; font-size: .75rem; font-weight: 600; }
+
+    /* Loading / empty */
+    .loading { text-align: center; padding: 4rem; color: #64748b; }
+    .spinner { width: 32px; height: 32px; border: 3px solid #1e1e2e; border-top-color: #ff6d00; border-radius: 50%; animation: spin .8s linear infinite; margin: 0 auto 1rem; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .empty { text-align: center; padding: 4rem; color: #475569; }
+
+    /* Access denied */
+    .denied { display: flex; align-items: center; justify-content: center; min-height: 100vh; flex-direction: column; gap: 1rem; }
+    .denied h1 { font-size: 1.5rem; color: #f87171; }
+    .denied p { color: #64748b; font-size: .9rem; }
+
+    @media (max-width: 640px) {
+      .header, .stats, .toolbar, .table-wrap { padding-left: 1rem; padding-right: 1rem; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<div id="app">
+  <div class="loading"><div class="spinner"></div>Carregando...</div>
+</div>
+
+<script>
+(function() {
+  var SUPA_URL = 'https://tdofhjcxykmskekpmcyi.supabase.co';
+  var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkb2ZoamN4eWttc2tla3BtY3lpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyMjE0OTUsImV4cCI6MjA5MTc5NzQ5NX0.rO3trrGiI0Yjwn-iBYADNRMCL2K2nu_ARWGrZbCw-Gk';
+  var ADMIN_EMAIL = 'domsamuel2510@gmail.com'; // só você tem acesso
+
+  var sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+  var allUsers = [];
+  var filtered = [];
+  var filterMode = 'all';
+
+  function fmt(iso) {
+    if (!iso) return '—';
+    var d = new Date(iso);
+    return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+  }
+
+  function fmtShort(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('pt-BR');
+  }
+
+  function provider(user) {
+    var id = (user.app_metadata && user.app_metadata.provider) || 'email';
+    if (id === 'google') return '<span class="provider-badge provider-google">🔵 Google</span>';
+    return '<span class="provider-badge provider-email">📧 Email</span>';
+  }
+
+  function status(user) {
+    if (user.email_confirmed_at) return '<span class="status-active">● Ativo</span>';
+    return '<span class="status-pending">● Pendente</span>';
+  }
+
+  function apply(search) {
+    search = (search || '').toLowerCase().trim();
+    filtered = allUsers.filter(function(u) {
+      if (filterMode === 'google' && (u.app_metadata && u.app_metadata.provider) !== 'google') return false;
+      if (filterMode === 'email' && (u.app_metadata && u.app_metadata.provider) === 'google') return false;
+      if (filterMode === 'active' && !u.email_confirmed_at) return false;
+      if (search && !(u.email||'').toLowerCase().includes(search)) return false;
+      return true;
+    });
+    renderTable();
+  }
+
+  function renderTable() {
+    var tbody = document.getElementById('tbody');
+    if (!tbody) return;
+    document.getElementById('countBadge').textContent = filtered.length + ' usuário' + (filtered.length !== 1 ? 's' : '');
+    if (filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">Nenhum usuário encontrado.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = filtered.map(function(u) {
+      return '<tr>' +
+        '<td class="id">' + u.id.substring(0,8) + '...</td>' +
+        '<td class="email">' + (u.email || '—') + '</td>' +
+        '<td>' + provider(u) + '</td>' +
+        '<td>' + status(u) + '</td>' +
+        '<td class="date">' + fmtShort(u.created_at) + '</td>' +
+        '<td class="date">' + fmt(u.last_sign_in_at) + '</td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  function renderPage(session) {
+    var google = allUsers.filter(function(u){ return u.app_metadata && u.app_metadata.provider === 'google'; }).length;
+    var active = allUsers.filter(function(u){ return u.email_confirmed_at; }).length;
+    var today = new Date().toDateString();
+    var todayCount = allUsers.filter(function(u){ return u.created_at && new Date(u.created_at).toDateString() === today; }).length;
+
+    document.getElementById('app').innerHTML = `
+      <div class="header">
+        <div class="header__logo">Kits<span>Digitalia</span> &nbsp;<span style="color:#475569;font-weight:400;font-size:.85rem;">/ Painel de Usuários</span></div>
+        <div style="display:flex;align-items:center;gap:1rem;">
+          <span class="header__info">${session.user.email}</span>
+          <button class="btn-logout" onclick="logout()">Sair</button>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat stat--orange">
+          <div class="stat__value" id="statTotal">${allUsers.length}</div>
+          <div class="stat__label">Total de usuários</div>
+        </div>
+        <div class="stat stat--green">
+          <div class="stat__value">${active}</div>
+          <div class="stat__label">Confirmados</div>
+        </div>
+        <div class="stat stat--blue">
+          <div class="stat__value">${google}</div>
+          <div class="stat__label">Via Google</div>
+        </div>
+        <div class="stat">
+          <div class="stat__value">${todayCount}</div>
+          <div class="stat__label">Cadastros hoje</div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <input class="search" id="searchInput" placeholder="🔍  Buscar por email..." oninput="applyFilter()" />
+        <button class="filter-btn active" id="f-all" onclick="setFilter('all')">Todos</button>
+        <button class="filter-btn" id="f-google" onclick="setFilter('google')">Google</button>
+        <button class="filter-btn" id="f-email" onclick="setFilter('email')">Email</button>
+        <button class="filter-btn" id="f-active" onclick="setFilter('active')">Confirmados</button>
+        <span class="count-badge" id="countBadge">${allUsers.length} usuários</span>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Email</th>
+              <th>Método</th>
+              <th>Status</th>
+              <th>Cadastro</th>
+              <th>Último acesso</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    `;
+
+    filtered = allUsers.slice();
+    renderTable();
+  }
+
+  window.setFilter = function(mode) {
+    filterMode = mode;
+    ['all','google','email','active'].forEach(function(m) {
+      var b = document.getElementById('f-'+m);
+      if (b) b.classList.toggle('active', m === mode);
+    });
+    applyFilter();
+  };
+
+  window.applyFilter = function() {
+    var s = document.getElementById('searchInput');
+    apply(s ? s.value : '');
+  };
+
+  window.logout = function() {
+    sb.auth.signOut().then(function() { window.location.href = '../login.html'; });
+  };
+
+  function denied(msg) {
+    document.getElementById('app').innerHTML = '<div class="denied"><h1>🔒 Acesso Negado</h1><p>' + msg + '</p><a href="../login.html" style="color:#ff6d00;margin-top:1rem;">← Voltar ao login</a></div>';
+  }
+
+  async function loadUsers() {
+    try {
+      var res = await fetch(SUPA_URL + '/auth/v1/admin/users?per_page=1000', {
+        headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+      });
+      if (res.ok) { var data = await res.json(); return data.users || []; }
+    } catch(e) {}
+    return [];
+  }
+
+  sb.auth.getSession().then(async function(r) {
+    var session = r.data && r.data.session;
+    if (!session) { window.location.href = '../login.html'; return; }
+    if (session.user.email !== ADMIN_EMAIL) { denied('Este painel é restrito ao administrador.'); return; }
+
+    allUsers = await loadUsers();
+    if (allUsers.length === 0) allUsers = [session.user];
+    allUsers.sort(function(a, b) { return new Date(b.created_at) - new Date(a.created_at); });
+    renderPage(session);
+  });
+})();
+</script>
+</body>
+</html>
