@@ -316,16 +316,18 @@
    ============================================================ */
 
 const API = {
-  login:           '/api/admin-login',
-  logout:          '/api/admin-logout',
-  me:              '/api/admin-me',
-  coupons:         '/api/admin-coupons',
-  couponUpdate:    '/api/admin-coupon-update',
-  couponDelete:    '/api/admin-coupon-delete',
-  products:        '/api/admin-products',
-  productUpdate:   '/api/admin-product-update',
-  resellers:       '/api/admin-resellers',
-  resellerUpdate:  '/api/admin-reseller-update',
+  login:           '/api/admin?action=login',
+  logout:          '/api/admin?action=logout',
+  me:              '/api/admin?action=me',
+  coupons:         '/api/admin?action=getCoupons',
+  couponCreate:    '/api/admin?action=createCoupon',
+  couponUpdate:    '/api/admin?action=updateCoupon',
+  couponDelete:    '/api/admin?action=deleteCoupon',
+  products:        '/api/admin?action=getProducts',
+  productCreate:   '/api/admin?action=createProduct',
+  productUpdate:   '/api/admin?action=updateProduct',
+  resellers:       '/api/admin?action=getResellers',
+  resellerUpdate:  '/api/admin?action=updateReseller',
 };
 
 // ── Toast ────────────────────────────────────────────────────────────────────
@@ -514,7 +516,7 @@ document.getElementById('createCouponBtn').addEventListener('click', async () =>
   if (!code) return toast('Digite o código do cupom.', 'err');
   if (!pct || pct < 1 || pct > 90) return toast('Desconto deve ser entre 1% e 90%.', 'err');
 
-  const r = await fetch(API.coupons, {
+  const r = await fetch(API.couponCreate, {
     method: 'POST', credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ code, discount_percent: pct }),
@@ -648,7 +650,7 @@ document.getElementById('createProdBtn').addEventListener('click', async () => {
   if (!name) return toast('Nome do produto é obrigatório.', 'err');
   if (!price || price <= 0) return toast('Preço inválido.', 'err');
 
-  const r = await fetch(API.products, {
+  const r = await fetch(API.productCreate, {
     method: 'POST', credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id, name, price, category: cat, active: true }),
@@ -667,7 +669,7 @@ document.getElementById('createProdBtn').addEventListener('click', async () => {
 async function importProduct(id, price) {
   const prod = _products.find(p => p.id === id);
   if (!prod) return;
-  const r = await fetch(API.products, {
+  const r = await fetch(API.productCreate, {
     method: 'POST', credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id, name: prod.name || id, price, active: prod.active }),

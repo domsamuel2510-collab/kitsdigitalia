@@ -307,7 +307,7 @@ document.getElementById('resellerForm').addEventListener('submit', async (e) => 
   };
 
   try {
-    const r = await fetch('/api/reseller-application', {
+    const r = await fetch('/api/public?action=resellerApplication', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify(body),

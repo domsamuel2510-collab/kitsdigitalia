@@ -1849,7 +1849,7 @@ document.addEventListener('DOMContentLoaded', () => {
       applyCouponBtn.textContent = '⏳';
 
       try {
-        const resp = await fetch('/api/validate-coupon', {
+        const resp = await fetch('/api/public?action=validateCoupon', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify({ coupon_code: code, product_id: productId, payment_method: method }),
