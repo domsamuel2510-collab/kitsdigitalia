@@ -207,7 +207,8 @@ module.exports = async function handler(req, res) {
     });
 
   } catch (unexpectedErr) {
+    // Loga internamente sem expor stack/mensagem técnica ao cliente
     console.error('[create-pix-order] unhandled error:', unexpectedErr);
-    return res.status(500).json({ error: 'Erro inesperado no servidor', details: unexpectedErr.message });
+    return res.status(500).json({ error: 'Erro inesperado no servidor. Tente novamente.' });
   }
 };

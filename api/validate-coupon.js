@@ -66,23 +66,39 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ valid: false, message: 'Cupom inativo.' });
   }
 
-  const discountPct     = Number(coupon.discount_percent);
-  const basePrice       = product.price; // em EUR
-  const discountAmount  = Math.round(basePrice * (discountPct / 100) * 100) / 100;
-  const finalPriceEUR   = Math.round((basePrice - discountAmount) * 100) / 100;
+  const discountPct = Number(coupon.discount_percent);
+  const baseEUR     = product.price; // em EUR
 
-  // Para exibição: se método for PIX, mostrar em BRL; senão EUR
-  const isPix  = (payment_method || '') === 'pix';
-  const mult   = isPix ? EUR_TO_BRL : 1;
+  // ── Cálculo idêntico ao usado em create-pix-order.js e create-manual-order.js ──
+  // PIX: desconto aplicado sobre o valor em BRL (após conversão EUR→BRL).
+  // IBAN/Binance: desconto aplicado sobre o valor em EUR.
+  // Usar a MESMA sequência de arredondamentos garante que o valor exibido
+  // aqui é exatamente o valor que será cobrado no pedido.
+  const isPix    = (payment_method || '') === 'pix';
   const currency = isPix ? 'BRL' : 'EUR';
+
+  let originalAmount, discountAmount, finalAmount;
+
+  if (isPix) {
+    // Replica create-pix-order.js → resolveCoupon(db, code, priceEUR * EUR_TO_BRL)
+    originalAmount = Math.round(baseEUR * EUR_TO_BRL * 100) / 100;
+    discountAmount = Math.round(originalAmount * (discountPct / 100) * 100) / 100;
+    finalAmount    = Math.round((originalAmount - discountAmount) * 100) / 100;
+  } else {
+    // Replica create-manual-order.js → resolveCoupon(db, code, priceAfterBinance)
+    // Sem Binance aqui (não sabemos se vai usar); calcula sobre EUR base.
+    originalAmount = Math.round(baseEUR * 100) / 100;
+    discountAmount = Math.round(originalAmount * (discountPct / 100) * 100) / 100;
+    finalAmount    = Math.round((originalAmount - discountAmount) * 100) / 100;
+  }
 
   return res.status(200).json({
     valid:            true,
     coupon_code:      coupon.code,
     discount_percent: discountPct,
-    original_amount:  Math.round(basePrice * mult * 100) / 100,
-    discount_amount:  Math.round(discountAmount * mult * 100) / 100,
-    final_amount:     Math.round(finalPriceEUR * mult * 100) / 100,
+    original_amount:  originalAmount,
+    discount_amount:  discountAmount,
+    final_amount:     finalAmount,
     currency,
     message:          `Cupom aplicado! ${discountPct}% de desconto.`,
   });

@@ -79,24 +79,34 @@ function getCookieToken(req) {
 
 function setSessionCookie(res, token) {
   const maxAge = Math.floor(SESSION_TTL_MS / 1000);
+  // Secure é obrigatório e explícito — não dependemos de "HTTPS aplica automaticamente".
+  // Em dev local com HTTP, o cookie não será enviado — use ngrok/HTTPS ou Vercel CLI.
   res.setHeader('Set-Cookie',
-    `${COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}`
+    `${COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${maxAge}`
   );
 }
 
 function clearSessionCookie(res) {
   res.setHeader('Set-Cookie',
-    `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0`
+    `${COOKIE_NAME}=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`
   );
 }
 
 // ── CORS para endpoints admin ─────────────────────────────────────────────────
 
 function setCorsHeaders(res) {
-  res.setHeader('Access-Control-Allow-Origin',      process.env.ALLOWED_ORIGIN || '*');
-  res.setHeader('Access-Control-Allow-Methods',     'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers',     'Content-Type');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  const origin = (process.env.ALLOWED_ORIGIN || '').trim();
+  if (origin) {
+    // Origem específica: pode enviar credenciais (cookies)
+    res.setHeader('Access-Control-Allow-Origin',      origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  } else {
+    // Sem origem configurada: usa wildcard, mas NÃO envia Allow-Credentials
+    // (combinação inválida que browsers rejeitam — evita falso sentido de segurança)
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
 
 // ── Middleware de proteção ────────────────────────────────────────────────────

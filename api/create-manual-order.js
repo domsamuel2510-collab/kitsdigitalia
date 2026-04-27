@@ -166,6 +166,6 @@ module.exports = async function handler(req, res) {
 
   } catch (unexpectedErr) {
     console.error('[create-manual-order] unhandled error:', unexpectedErr);
-    return res.status(500).json({ error: 'Erro inesperado no servidor', details: unexpectedErr.message });
+    return res.status(500).json({ error: 'Erro inesperado no servidor. Tente novamente.' });
   }
 };
