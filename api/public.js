@@ -181,11 +181,46 @@ async function actionResellerApplication(req, res) {
   });
 }
 
+// ── getProductStatuses ────────────────────────────────────────────────────────
+
+/**
+ * GET/POST ?action=getProductStatuses
+ *
+ * Retorna o status de todos os produtos registrados no banco.
+ * Permite que o frontend sincronize sold_out / inactive em tempo real.
+ * Não requer autenticação — leitura pública de disponibilidade.
+ *
+ * Resposta: { statuses: { [product_id]: 'active'|'sold_out'|'inactive' } }
+ */
+async function actionGetProductStatuses(req, res) {
+  const db = getDb();
+
+  const { data, error } = await db
+    .from('products')
+    .select('id, status, active');
+
+  if (error) {
+    console.error('[public] getProductStatuses:', error.message);
+    return res.status(500).json({ error: 'Erro ao buscar status dos produtos.' });
+  }
+
+  const statuses = {};
+  (data || []).forEach(p => {
+    // Suporte a período pré/pós migration 002
+    statuses[p.id] = (p.status && ['active', 'sold_out', 'inactive'].includes(p.status))
+      ? p.status
+      : (p.active ? 'active' : 'inactive');
+  });
+
+  return res.status(200).json({ statuses });
+}
+
 // ── Roteador principal ────────────────────────────────────────────────────────
 
 const ACTION_MAP = {
   validateCoupon:       actionValidateCoupon,
   resellerApplication:  actionResellerApplication,
+  getProductStatuses:   actionGetProductStatuses,
 };
 
 module.exports = async function handler(req, res) {

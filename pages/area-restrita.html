@@ -612,20 +612,22 @@ function renderProductTable() {
             <td>${esc(p.name || p.id)}</td>
             <td>€${Number(p.price).toFixed(2)}</td>
             <td>
-              <span class="badge ${p.active ? 'badge-green' : 'badge-red'}">
-                ${p.active ? '✓ Ativo' : '✗ Inativo'}
-              </span>
+              ${(p.status||'active') === 'active'   ? '<span class="badge badge-green">✓ Ativo</span>' :
+                (p.status||'active') === 'sold_out' ? '<span class="badge badge-orange">⚠ Esgotado</span>' :
+                                                       '<span class="badge badge-red">✗ Inativo</span>'}
             </td>
             <td>
               <span class="source-tag">${p.source === 'db' ? 'DB' : 'catálogo'}</span>
             </td>
             <td>
-              <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
+              <div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;">
                 ${p.source === 'db' ? `
                   <button class="btn-xs" onclick="editProductPrice('${esc(p.id)}', ${p.price})">Preço</button>
-                  <button class="btn-xs" onclick="toggleProduct('${esc(p.id)}', ${!p.active})">
-                    ${p.active ? 'Desativar' : 'Ativar'}
-                  </button>
+                  <select class="btn-xs" style="cursor:pointer;padding:.2rem .5rem;background:var(--bg3);color:var(--white);border:1px solid var(--border);border-radius:4px;" onchange="setProductStatus('${esc(p.id)}', this.value)">
+                    <option value="active"   ${(p.status||'active')==='active'   ? 'selected' : ''}>✓ Ativo</option>
+                    <option value="sold_out" ${(p.status||'')==='sold_out'       ? 'selected' : ''}>⚠ Esgotado</option>
+                    <option value="inactive" ${(p.status||'active')==='inactive' ? 'selected' : ''}>✗ Inativo</option>
+                  </select>
                 ` : `
                   <button class="btn-xs success" onclick="importProduct('${esc(p.id)}', ${p.price})">
                     Salvar no banco
@@ -653,7 +655,7 @@ document.getElementById('createProdBtn').addEventListener('click', async () => {
   const r = await fetch(API.productCreate, {
     method: 'POST', credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id, name, price, category: cat, active: true }),
+    body: JSON.stringify({ id, name, price, category: cat, status: 'active' }),
   });
   const d = await r.json();
   if (!r.ok) return toast(d.error || 'Erro ao salvar.', 'err');
@@ -672,7 +674,7 @@ async function importProduct(id, price) {
   const r = await fetch(API.productCreate, {
     method: 'POST', credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id, name: prod.name || id, price, active: prod.active }),
+    body: JSON.stringify({ id, name: prod.name || id, price, status: prod.status || (prod.active ? 'active' : 'inactive') }),
   });
   const d = await r.json();
   if (!r.ok) return toast(d.error || 'Erro ao importar.', 'err');
@@ -696,15 +698,16 @@ async function editProductPrice(id, current) {
   await loadProducts();
 }
 
-async function toggleProduct(id, active) {
+async function setProductStatus(id, status) {
   const r = await fetch(API.productUpdate, {
     method: 'POST', credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id, active }),
+    body: JSON.stringify({ id, status }),
   });
   const d = await r.json();
-  if (!r.ok) return toast(d.error || 'Erro.', 'err');
-  toast(active ? `Produto "${id}" ativado.` : `Produto "${id}" desativado.`);
+  if (!r.ok) return toast(d.error || 'Erro ao atualizar status.', 'err');
+  const labels = { active: 'ativo ✓', sold_out: 'esgotado ⚠', inactive: 'inativo ✗' };
+  toast(`Produto "${id}" marcado como ${labels[status] || status}.`);
   await loadProducts();
 }
 

@@ -248,6 +248,26 @@ function kdCategoryLabel(category, lang) {
 }
 
 /* ============================================================
+   DB Product Statuses — sincroniza sold_out/inactive do banco
+   ============================================================ */
+async function kdApplyDbProductStatuses() {
+  try {
+    const r = await fetch('/api/public?action=getProductStatuses');
+    if (!r.ok) return;
+    const { statuses } = await r.json();
+    if (!statuses || typeof statuses !== 'object') return;
+    Object.entries(statuses).forEach(([id, status]) => {
+      if (KD_PRODUCTS[id]) {
+        KD_PRODUCTS[id].status  = status;
+        KD_PRODUCTS[id].soldOut = (status === 'sold_out' || status === 'inactive');
+      }
+    });
+  } catch {
+    // silent — catalog defaults (hardcoded soldOut flags) remain in effect
+  }
+}
+
+/* ============================================================
    Render: Products Page
    ============================================================ */
 function renderProductsPage() {
@@ -278,6 +298,7 @@ function renderProductsPage() {
   const btnSoldOut = t_ui['dynamic-soldout-btn'] || 'Esgotado';
 
   function buildCard(product) {
+    if (product.status === 'inactive') return null; // hidden from public site
     const t         = product.translations[lang] || product.translations.pt;
     const isSoldOut = !!product.soldOut;
     const isCombo   = !!product.isCombo;
@@ -332,14 +353,16 @@ function renderProductsPage() {
 
   // Render combos first (they appear at top of streaming)
   Object.values(KD_PRODUCTS).filter(p => p.isCombo).forEach(product => {
+    const card   = buildCard(product); // null if inactive
     const target = groups[product.category];
-    if (target) target.appendChild(buildCard(product));
+    if (card && target) target.appendChild(card);
   });
 
   // Render all non-combo products
   Object.values(KD_PRODUCTS).filter(p => !p.isCombo).forEach(product => {
+    const card   = buildCard(product); // null if inactive
     const target = groups[product.category];
-    if (target) target.appendChild(buildCard(product));
+    if (card && target) target.appendChild(card);
   });
 
   // Re-apply active filter after re-render
@@ -408,8 +431,24 @@ function renderProductDetailPage() {
   setText('detailPricePeriod', kdBillingLabel(lang));
   const buyBtn = document.getElementById('detailBuyBtn');
   if (buyBtn) {
-    buyBtn.href = 'checkout.html?product=' + product.id;
-    buyBtn.textContent = lang === 'it' ? '🚀 Acquista via WhatsApp ora' : lang === 'en' ? '🚀 Buy via WhatsApp now' : '🚀 Comprar via WhatsApp agora';
+    if (product.soldOut) {
+      const soldOutLabel = lang === 'it' ? '⚠ Esaurito' : lang === 'en' ? '⚠ Sold Out' : '⚠ Esgotado';
+      buyBtn.setAttribute('href', '#');
+      buyBtn.textContent  = soldOutLabel;
+      buyBtn.style.opacity       = '0.45';
+      buyBtn.style.cursor        = 'not-allowed';
+      buyBtn.style.pointerEvents = 'none';
+      buyBtn.classList.remove('btn-primary');
+      buyBtn.classList.add('btn-outline');
+    } else {
+      buyBtn.href = 'checkout.html?product=' + product.id;
+      buyBtn.textContent = lang === 'it' ? '🚀 Acquista via WhatsApp ora' : lang === 'en' ? '🚀 Buy via WhatsApp now' : '🚀 Comprar via WhatsApp agora';
+      buyBtn.style.opacity       = '';
+      buyBtn.style.cursor        = '';
+      buyBtn.style.pointerEvents = '';
+      buyBtn.classList.add('btn-primary');
+      buyBtn.classList.remove('btn-outline');
+    }
   }
 
   const hintEl = document.getElementById('detailActivationHint');
@@ -2340,6 +2379,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
 
   document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+  /* ---- Fetch DB product statuses (products, detail, checkout pages) ---- */
+  // First render happens synchronously via setLang() with catalog defaults.
+  // After DB responds, override soldOut/inactive flags and re-render.
+  if (document.getElementById('aiProducts') || document.getElementById('detailTitle') || document.getElementById('product')) {
+    kdApplyDbProductStatuses().then(() => {
+      if (document.getElementById('aiProducts'))  renderProductsPage();
+      if (document.getElementById('detailTitle')) renderProductDetailPage();
+      if (document.getElementById('product'))     { renderCheckoutProducts(); updateOrderSummary(); }
+    });
+  }
 
   /* ---- Legacy card animation (inner pages without .reveal) ---- */
   const cardObserver = new IntersectionObserver((entries) => {

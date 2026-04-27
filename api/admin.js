@@ -261,7 +261,7 @@ async function actionCreateProduct(req, res) {
   const admin = requireAdmin(req, res);
   if (!admin) return;
 
-  const { id, name, description, price, currency, category, image_url, active } = req.body || {};
+  const { id, name, description, price, currency, category, image_url, active, status } = req.body || {};
 
   if (!id || typeof id !== 'string' || !id.trim()) {
     return res.status(400).json({ error: 'ID do produto é obrigatório.' });
@@ -274,6 +274,11 @@ async function actionCreateProduct(req, res) {
     return res.status(400).json({ error: 'Preço inválido.' });
   }
 
+  const VALID_STATUSES = ['active', 'sold_out', 'inactive'];
+  // Prefer explicit status; fall back to active boolean; default 'active'
+  const productStatus = VALID_STATUSES.includes(status) ? status
+    : (active === false ? 'inactive' : 'active');
+
   const row = {
     id:          id.trim().toLowerCase(),
     name:        name.trim().slice(0, 200),
@@ -282,7 +287,8 @@ async function actionCreateProduct(req, res) {
     currency:    currency === 'BRL' ? 'BRL' : 'EUR',
     category:    category ? String(category).trim().slice(0, 50) : null,
     image_url:   image_url ? String(image_url).trim().slice(0, 500) : null,
-    active:      active !== false,
+    status:      productStatus,
+    active:      productStatus === 'active', // sync boolean for backward compat
   };
 
   const db = getDb();
@@ -308,7 +314,7 @@ async function actionUpdateProduct(req, res) {
   const admin = requireAdmin(req, res);
   if (!admin) return;
 
-  const { id, name, description, price, currency, category, image_url, active } = req.body || {};
+  const { id, name, description, price, currency, category, image_url, active, status } = req.body || {};
   if (!id) return res.status(400).json({ error: 'ID do produto é obrigatório.' });
 
   const updates = {};
@@ -333,7 +339,18 @@ async function actionUpdateProduct(req, res) {
   if (image_url !== undefined) {
     updates.image_url = image_url ? String(image_url).trim().slice(0, 500) : null;
   }
-  if (active !== undefined) {
+  // Handle status (primary) or fall back to active boolean (legacy)
+  const VALID_STATUSES = ['active', 'sold_out', 'inactive'];
+  if (status !== undefined) {
+    if (!VALID_STATUSES.includes(status)) {
+      return res.status(400).json({ error: 'Status inválido. Use: active, sold_out ou inactive.' });
+    }
+    updates.status = status;
+    updates.active = (status === 'active'); // sync boolean
+  } else if (active !== undefined) {
+    // Legacy path: boolean → status
+    const derivedStatus = Boolean(active) ? 'active' : 'inactive';
+    updates.status = derivedStatus;
     updates.active = Boolean(active);
   }
 
