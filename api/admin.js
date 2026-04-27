@@ -12,9 +12,10 @@
 //   POST /api/admin?action=deleteCoupon   { id }
 //   GET  /api/admin?action=getProducts
 //   POST /api/admin?action=createProduct  { id, name, price, ... }
-//   POST /api/admin?action=updateProduct  { id, name?, price?, ... }
-//   GET  /api/admin?action=getResellers   [?status=new|contacted|approved|rejected]
-//   POST /api/admin?action=updateReseller { id, status }
+//   POST /api/admin?action=updateProduct        { id, name?, price?, ... }
+//   POST /api/admin?action=syncCatalogProducts  — importa catálogo local → Supabase
+//   GET  /api/admin?action=getResellers         [?status=new|contacted|approved|rejected]
+//   POST /api/admin?action=updateReseller       { id, status }
 //
 // Env vars:
 //   ADMIN_USERNAME, ADMIN_PASSWORD, ADMIN_SESSION_SECRET
@@ -26,6 +27,8 @@
 
 const { createHmac, timingSafeEqual } = require('crypto');
 const { createClient }                = require('@supabase/supabase-js');
+const { CATALOG_META }                = require('./_catalog-meta');
+const { PRODUCT_CATALOG }             = require('./_catalog');
 const {
   signToken,
   verifyToken,
@@ -442,6 +445,73 @@ async function actionUpdateReseller(req, res) {
   return res.status(200).json({ reseller: data });
 }
 
+// ── Sync Catalog Products ─────────────────────────────────────────────────────
+
+// POST ?action=syncCatalogProducts
+//
+// Importa para o Supabase todos os produtos do catálogo local que ainda não
+// existem no banco. Produtos já existentes NÃO são sobrescritos (preços e
+// status editados manualmente são preservados).
+//
+// Retorna: { imported, skipped, total }
+async function actionSyncCatalogProducts(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const admin = requireAdmin(req, res);
+  if (!admin) return;
+
+  const db    = getDb();
+  const total = Object.keys(PRODUCT_CATALOG).length;
+
+  // 1. Busca IDs já existentes no banco
+  const { data: existing, error: fetchErr } = await db
+    .from('products')
+    .select('id');
+
+  if (fetchErr) {
+    console.error('[admin] syncCatalogProducts fetch:', fetchErr.message);
+    return res.status(500).json({ error: 'Erro ao verificar produtos existentes.' });
+  }
+
+  const existingIds = new Set((existing || []).map(p => p.id));
+  const skipped     = existingIds.size;
+
+  // 2. Monta rows apenas para produtos ausentes
+  const toInsert = Object.entries(PRODUCT_CATALOG)
+    .filter(([id]) => !existingIds.has(id))
+    .map(([id, item]) => {
+      const meta = CATALOG_META[id] || {};
+      return {
+        id,
+        name:      meta.name     || id,
+        category:  meta.category || null,
+        image_url: meta.image_url || null,
+        price:     item.price,
+        currency:  'EUR',
+        status:    item.soldOut ? 'sold_out' : 'active',
+        active:    !item.soldOut,
+      };
+    });
+
+  if (toInsert.length === 0) {
+    console.log(`[admin] syncCatalogProducts | nada a importar | total_db=${skipped} | admin=${admin.username}`);
+    return res.status(200).json({ imported: 0, skipped, total });
+  }
+
+  // 3. Insere novos produtos — ON CONFLICT DO NOTHING via ignoreDuplicates
+  const { error: insertErr } = await db
+    .from('products')
+    .insert(toInsert, { count: 'exact' });
+
+  if (insertErr) {
+    console.error('[admin] syncCatalogProducts insert:', insertErr.message);
+    return res.status(500).json({ error: 'Erro ao importar produtos do catálogo.' });
+  }
+
+  console.log(`[admin] syncCatalogProducts | imported=${toInsert.length} | skipped=${skipped} | admin=${admin.username}`);
+  return res.status(200).json({ imported: toInsert.length, skipped, total });
+}
+
 // ── Roteador principal ────────────────────────────────────────────────────────
 
 const ACTION_MAP = {
@@ -456,7 +526,8 @@ const ACTION_MAP = {
   createProduct:  actionCreateProduct,
   updateProduct:  actionUpdateProduct,
   getResellers:   actionGetResellers,
-  updateReseller: actionUpdateReseller,
+  updateReseller:       actionUpdateReseller,
+  syncCatalogProducts:  actionSyncCatalogProducts,
 };
 
 module.exports = async function handler(req, res) {

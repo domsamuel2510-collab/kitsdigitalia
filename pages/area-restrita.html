@@ -241,10 +241,13 @@
       <div class="tab-panel" id="tab-products">
         <div class="panel-title">📦 Produtos</div>
 
-        <!-- Criar / importar produto -->
+        <!-- Mensagem de sincronização -->
+        <div id="syncMsg" style="display:none;margin-bottom:.75rem;padding:.5rem .85rem;border-radius:6px;font-size:.82rem;"></div>
+
+        <!-- Criar produto novo (não existente no catálogo) -->
         <div class="admin-card">
-          <h3>Adicionar / Importar produto</h3>
-          <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:1rem;">Produtos do catálogo local aparecem na lista abaixo. "Salvar no banco" os move para o Supabase, onde você pode editar preço e status.</p>
+          <h3>Criar novo produto</h3>
+          <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:1rem;">Para produtos que não estão no catálogo. Os produtos do catálogo são importados automaticamente ao abrir esta aba.</p>
           <div class="form-row">
             <div class="form-group">
               <label>ID do produto</label>
@@ -263,7 +266,7 @@
               <input type="text" id="newProdCat" placeholder="ai" />
             </div>
             <div style="padding-bottom:2px;">
-              <button class="btn btn-primary" id="createProdBtn">+ Salvar</button>
+              <button class="btn btn-primary" id="createProdBtn">+ Criar</button>
             </div>
           </div>
         </div>
@@ -326,6 +329,7 @@ const API = {
   products:        '/api/admin?action=getProducts',
   productCreate:   '/api/admin?action=createProduct',
   productUpdate:   '/api/admin?action=updateProduct',
+  syncCatalog:     '/api/admin?action=syncCatalogProducts',
   resellers:       '/api/admin?action=getResellers',
   resellerUpdate:  '/api/admin?action=updateReseller',
 };
@@ -579,7 +583,33 @@ async function deleteCoupon(id, code) {
 let _products = [];
 
 async function loadProducts() {
-  const wrap = document.getElementById('productTableWrap');
+  const wrap    = document.getElementById('productTableWrap');
+  const syncMsg = document.getElementById('syncMsg');
+
+  // ── 1. Sincroniza catálogo local → Supabase (só insere ausentes) ──────────
+  try {
+    const sr = await fetch(API.syncCatalog, {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (sr.ok) {
+      const sd = await sr.json();
+      if (syncMsg) {
+        if (sd.imported > 0) {
+          syncMsg.textContent = `✅ Catálogo sincronizado: ${sd.imported} produto(s) importado(s) para o banco.`;
+          syncMsg.style.cssText = 'display:block;background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.25);color:#4ade80;padding:.5rem .85rem;border-radius:6px;font-size:.82rem;margin-bottom:.75rem;';
+        } else {
+          syncMsg.textContent = `✔ Catálogo sincronizado — ${sd.total} produto(s) no banco.`;
+          syncMsg.style.cssText = 'display:block;background:var(--bg2);border:1px solid var(--border);color:var(--text-muted);padding:.5rem .85rem;border-radius:6px;font-size:.82rem;margin-bottom:.75rem;';
+        }
+        setTimeout(() => { syncMsg.style.display = 'none'; }, 6000);
+      }
+    }
+  } catch {
+    // sync silencioso — não bloqueia carregamento da lista
+  }
+
+  // ── 2. Carrega lista de produtos (todos agora DB) ─────────────────────────
   try {
     const r = await fetch(API.products, { credentials: 'include' });
     if (!r.ok) { wrap.innerHTML = '<div class="empty-state">Erro ao carregar produtos.</div>'; return; }
@@ -629,9 +659,7 @@ function renderProductTable() {
                     <option value="inactive" ${(p.status||'active')==='inactive' ? 'selected' : ''}>✗ Inativo</option>
                   </select>
                 ` : `
-                  <button class="btn-xs success" onclick="importProduct('${esc(p.id)}', ${p.price})">
-                    Salvar no banco
-                  </button>
+                  <span style="font-size:.75rem;color:var(--text-muted);">⏳ sincronizando…</span>
                 `}
               </div>
             </td>
@@ -668,19 +696,6 @@ document.getElementById('createProdBtn').addEventListener('click', async () => {
   await loadDashboard();
 });
 
-async function importProduct(id, price) {
-  const prod = _products.find(p => p.id === id);
-  if (!prod) return;
-  const r = await fetch(API.productCreate, {
-    method: 'POST', credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id, name: prod.name || id, price, status: prod.status || (prod.active ? 'active' : 'inactive') }),
-  });
-  const d = await r.json();
-  if (!r.ok) return toast(d.error || 'Erro ao importar.', 'err');
-  toast(`Produto "${id}" importado para o banco!`);
-  await loadProducts();
-}
 
 async function editProductPrice(id, current) {
   const val = prompt(`Novo preço em EUR (atual: €${Number(current).toFixed(2)}):`, Number(current).toFixed(2));
