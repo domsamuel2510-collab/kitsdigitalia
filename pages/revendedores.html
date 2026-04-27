@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Seja um Revendedor — KitsDigitalia</title>
+  <meta name="description" content="Revenda ferramentas digitais premium com suporte completo. Ganhe dinheiro vendendo ChatGPT, Netflix, Canva e muito mais." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤝</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../styles/main.css" />
+  <style>
+    .reseller-hero {
+      padding: 5rem 0 3.5rem;
+      text-align: center;
+      background: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255,109,0,.1) 0%, transparent 70%);
+      border-bottom: 1px solid var(--border);
+    }
+    .reseller-hero h1 { font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 900; color: var(--white); margin-bottom: .75rem; }
+    .reseller-hero p  { font-size: 1.05rem; color: var(--text-muted); max-width: 580px; margin: 0 auto; }
+
+    .benefits-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.25rem;
+      margin: 3rem 0;
+    }
+    .benefit-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      text-align: center;
+    }
+    .benefit-card__icon { font-size: 2rem; margin-bottom: .75rem; display: block; }
+    .benefit-card__title { font-size: .95rem; font-weight: 700; color: var(--white); margin-bottom: .4rem; }
+    .benefit-card__desc  { font-size: .82rem; color: var(--text-muted); line-height: 1.5; }
+
+    .form-section {
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 0 1rem 4rem;
+    }
+    .form-section h2 {
+      font-size: 1.6rem; font-weight: 800; color: var(--white);
+      text-align: center; margin-bottom: .5rem;
+    }
+    .form-section .sub {
+      text-align: center; color: var(--text-muted); font-size: .9rem; margin-bottom: 2rem;
+    }
+    .reseller-form {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+    }
+    .reseller-form .form-group + .form-group { margin-top: 1.1rem; }
+
+    .success-box {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 2.5rem 1.5rem;
+      gap: 1rem;
+      background: var(--bg2);
+      border: 1px solid rgba(74,222,128,.3);
+      border-radius: var(--radius-lg);
+    }
+    .success-box__icon { font-size: 3rem; }
+    .success-box__title { font-size: 1.3rem; font-weight: 800; color: var(--white); }
+    .success-box__desc  { font-size: .9rem; color: var(--text-muted); max-width: 380px; }
+
+    .reseller-err {
+      display: none;
+      margin-top: 1rem;
+      background: rgba(239,68,68,.1);
+      border: 1px solid rgba(239,68,68,.3);
+      border-radius: var(--radius);
+      padding: .85rem 1rem;
+      color: #f87171;
+      font-size: .875rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== NAVBAR ===== -->
+<nav class="navbar">
+  <div class="container navbar__inner">
+    <a href="../index.html" class="navbar__logo">Kits<span>Digitalia</span></a>
+    <ul class="navbar__links">
+      <li><a href="../index.html">Home</a></li>
+      <li><a href="products.html">Produtos</a></li>
+      <li><a href="revendedores.html" style="color:var(--orange);font-weight:700;">Revendedores</a></li>
+      <li><a href="about.html">Sobre</a></li>
+      <li><a href="contact.html">Contato</a></li>
+    </ul>
+    <div class="navbar__cta">
+      <a href="../login.html" class="btn btn-outline btn-sm">Entrar →</a>
+    </div>
+    <button class="hamburger" aria-label="Abrir menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+<div class="mobile-nav">
+  <div class="mobile-nav__panel">
+    <button class="mobile-nav__close">✕</button>
+    <ul class="mobile-nav__links">
+      <li><a href="../index.html">Home</a></li>
+      <li><a href="products.html">Produtos</a></li>
+      <li><a href="revendedores.html">Revendedores</a></li>
+      <li><a href="about.html">Sobre</a></li>
+      <li><a href="contact.html">Contato</a></li>
+    </ul>
+  </div>
+</div>
+
+<!-- ===== HERO ===== -->
+<section class="reseller-hero">
+  <div class="container">
+    <div style="display:inline-flex;align-items:center;gap:.5rem;background:rgba(255,109,0,.1);border:1px solid rgba(255,109,0,.25);border-radius:999px;padding:.4rem 1.1rem;font-size:.82rem;font-weight:600;color:var(--orange-lt);margin-bottom:1.5rem;">
+      🤝 Programa de Revendedores
+    </div>
+    <h1>Ganhe revendendo as<br><span class="accent">melhores ferramentas digitais</span></h1>
+    <p>Junte-se ao programa de revendedores KitsDigitalia. Venda acesso a ChatGPT, Netflix, Canva, Spotify e muito mais — com suporte completo e margens atrativas.</p>
+    <div style="margin-top:1.75rem;display:flex;justify-content:center;gap:.75rem;flex-wrap:wrap;">
+      <a href="#formulario" class="btn btn-primary btn-lg">Quero ser revendedor →</a>
+      <a href="products.html" class="btn btn-outline btn-lg">Ver produtos</a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== BENEFITS ===== -->
+<section style="padding:3rem 0 1rem;">
+  <div class="container">
+    <div style="text-align:center;margin-bottom:2rem;">
+      <h2 style="font-size:1.6rem;font-weight:800;color:var(--white);">Por que ser um revendedor?</h2>
+    </div>
+    <div class="benefits-grid">
+      <div class="benefit-card">
+        <span class="benefit-card__icon">💰</span>
+        <div class="benefit-card__title">Margens atrativas</div>
+        <div class="benefit-card__desc">Revenda produtos digitais com boas margens e preços competitivos para seus clientes.</div>
+      </div>
+      <div class="benefit-card">
+        <span class="benefit-card__icon">📦</span>
+        <div class="benefit-card__title">Catálogo completo</div>
+        <div class="benefit-card__desc">Mais de 20 produtos premium: IA, streaming, design e redes sociais — sempre atualizados.</div>
+      </div>
+      <div class="benefit-card">
+        <span class="benefit-card__icon">💬</span>
+        <div class="benefit-card__title">Suporte dedicado</div>
+        <div class="benefit-card__desc">Canal exclusivo de suporte via WhatsApp para revendedores, com resposta rápida.</div>
+      </div>
+      <div class="benefit-card">
+        <span class="benefit-card__icon">🌍</span>
+        <div class="benefit-card__title">Em qualquer país</div>
+        <div class="benefit-card__desc">Aceitamos revendedores de Portugal, Brasil e de toda a Europa. Pagamentos flexíveis.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FORMULÁRIO ===== -->
+<section id="formulario" style="padding:2rem 0 1rem;">
+  <div class="form-section">
+    <h2>Cadastre-se agora</h2>
+    <p class="sub">Preencha o formulário e entraremos em contato em até 24 horas.</p>
+
+    <div class="reseller-form" id="resellerFormWrap">
+      <form id="resellerForm" autocomplete="off">
+        <div class="form-group">
+          <label for="rName">Nome completo *</label>
+          <input type="text" id="rName" placeholder="Seu nome" required maxlength="200" />
+        </div>
+        <div class="form-group">
+          <label for="rEmail">Email *</label>
+          <input type="email" id="rEmail" placeholder="seu@email.com" required />
+        </div>
+        <div class="form-group">
+          <label for="rWhatsApp">WhatsApp *</label>
+          <input type="tel" id="rWhatsApp" placeholder="+351 912 345 678" required maxlength="50" />
+        </div>
+        <div class="form-group">
+          <label for="rCountry">País *</label>
+          <select id="rCountry" required style="width:100%;">
+            <option value="">Selecione seu país...</option>
+            <option value="Portugal">🇵🇹 Portugal</option>
+            <option value="Brasil">🇧🇷 Brasil</option>
+            <option value="Espanha">🇪🇸 Espanha</option>
+            <option value="França">🇫🇷 França</option>
+            <option value="Itália">🇮🇹 Itália</option>
+            <option value="Alemanha">🇩🇪 Alemanha</option>
+            <option value="Reino Unido">🇬🇧 Reino Unido</option>
+            <option value="Estados Unidos">🇺🇸 Estados Unidos</option>
+            <option value="Angola">🇦🇴 Angola</option>
+            <option value="Moçambique">🇲🇿 Moçambique</option>
+            <option value="Outro">🌍 Outro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="rMessage">Mensagem (opcional)</label>
+          <textarea id="rMessage" placeholder="Conte-nos um pouco sobre você e como pretende revender..." rows="3" maxlength="2000" style="resize:vertical;"></textarea>
+        </div>
+
+        <div class="reseller-err" id="resellerErr"></div>
+
+        <button type="submit" class="btn btn-primary" id="resellerSubmitBtn"
+          style="width:100%;justify-content:center;margin-top:1.5rem;padding:.9rem;font-size:1rem;">
+          🤝 Enviar cadastro
+        </button>
+        <p style="text-align:center;font-size:.78rem;color:var(--text-muted);margin-top:.75rem;">
+          🛡️ Seus dados são protegidos e nunca compartilhados com terceiros.
+        </p>
+      </form>
+    </div>
+
+    <!-- Sucesso -->
+    <div class="success-box" id="resellerSuccess">
+      <div class="success-box__icon">🎉</div>
+      <div class="success-box__title">Cadastro recebido!</div>
+      <div class="success-box__desc">
+        Obrigado pelo interesse! Nossa equipe analisará seu perfil e entrará em contato em breve pelo WhatsApp ou email informado.
+      </div>
+      <a href="products.html" class="btn btn-outline" style="margin-top:.5rem;">Ver produtos</a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FAQ ===== -->
+<section style="padding:1rem 0 3rem;">
+  <div class="container" style="max-width:640px;">
+    <h2 style="font-size:1.4rem;font-weight:800;color:var(--white);text-align:center;margin-bottom:1.5rem;">Perguntas frequentes</h2>
+    <div style="display:flex;flex-direction:column;gap:.75rem;">
+      <details style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;">
+        <summary style="cursor:pointer;font-weight:600;color:var(--white);">Como funciona o programa de revendedores?</summary>
+        <p style="color:var(--text-muted);font-size:.875rem;margin-top:.75rem;line-height:1.6;">Você compra produtos com preço de revendedor e revende para seus clientes com a margem que preferir. Todo o suporte técnico é fornecido pela KitsDigitalia.</p>
+      </details>
+      <details style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;">
+        <summary style="cursor:pointer;font-weight:600;color:var(--white);">Preciso ter CNPJ ou empresa?</summary>
+        <p style="color:var(--text-muted);font-size:.875rem;margin-top:.75rem;line-height:1.6;">Não. Qualquer pessoa pode ser revendedora, independentemente de ter ou não empresa formalmente constituída.</p>
+      </details>
+      <details style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;">
+        <summary style="cursor:pointer;font-weight:600;color:var(--white);">Em quanto tempo recebo resposta?</summary>
+        <p style="color:var(--text-muted);font-size:.875rem;margin-top:.75rem;line-height:1.6;">Nossa equipe analisa os cadastros diariamente. Você receberá uma resposta em até 24 horas pelo WhatsApp ou email informado.</p>
+      </details>
+      <details style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;">
+        <summary style="cursor:pointer;font-weight:600;color:var(--white);">Quais países são aceitos?</summary>
+        <p style="color:var(--text-muted);font-size:.875rem;margin-top:.75rem;line-height:1.6;">Aceitamos revendedores de Portugal, Brasil, e demais países europeus e da CPLP. Entre em contato caso não encontre seu país no formulário.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer__grid">
+      <div class="footer__brand">
+        <a href="../index.html" class="navbar__logo">Kits<span>Digitalia</span></a>
+        <p>Sua plataforma de acesso a ferramentas digitais premium com suporte via WhatsApp.</p>
+      </div>
+      <div class="footer__col">
+        <h4>Produtos</h4>
+        <ul>
+          <li><a href="products.html#ai">Ferramentas IA</a></li>
+          <li><a href="products.html#streaming">Streaming</a></li>
+          <li><a href="products.html#design">Design</a></li>
+        </ul>
+      </div>
+      <div class="footer__col">
+        <h4>Empresa</h4>
+        <ul>
+          <li><a href="about.html">Sobre nós</a></li>
+          <li><a href="contact.html">Contato</a></li>
+          <li><a href="revendedores.html">Revendedores</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer__bottom">
+      <p style="color:var(--text-muted);">© 2025 KitsDigitalia. Todos os direitos reservados.</p>
+    </div>
+  </div>
+</footer>
+
+<script src="../scripts/main.js"></script>
+<script>
+/* ── Reseller form submit ─────────────────────────────────────────────── */
+document.getElementById('resellerForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const btn  = document.getElementById('resellerSubmitBtn');
+  const errEl = document.getElementById('resellerErr');
+  errEl.style.display = 'none';
+  btn.disabled    = true;
+  btn.textContent = '⏳ Enviando...';
+
+  const body = {
+    name:     document.getElementById('rName').value.trim(),
+    email:    document.getElementById('rEmail').value.trim(),
+    whatsapp: document.getElementById('rWhatsApp').value.trim(),
+    country:  document.getElementById('rCountry').value,
+    message:  document.getElementById('rMessage').value.trim() || undefined,
+  };
+
+  try {
+    const r = await fetch('/api/reseller-application', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(body),
+    });
+    const d = await r.json();
+
+    if (!r.ok || !d.success) {
+      errEl.textContent   = d.error || 'Erro ao enviar. Tente novamente.';
+      errEl.style.display = 'block';
+      btn.disabled    = false;
+      btn.textContent = '🤝 Enviar cadastro';
+      return;
+    }
+
+    // Sucesso
+    document.getElementById('resellerFormWrap').style.display = 'none';
+    document.getElementById('resellerSuccess').style.display  = 'flex';
+    window.scrollTo({ top: document.getElementById('formulario').offsetTop - 80, behavior: 'smooth' });
+
+  } catch (err) {
+    errEl.textContent   = 'Erro de conexão. Verifique sua internet e tente novamente.';
+    errEl.style.display = 'block';
+    btn.disabled    = false;
+    btn.textContent = '🤝 Enviar cadastro';
+  }
+});
+</script>
+</body>
+</html>

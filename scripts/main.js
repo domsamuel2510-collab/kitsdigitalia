@@ -473,6 +473,11 @@ function renderCheckoutProducts() {
 }
 
 /* ============================================================
+   Checkout: Coupon state
+   ============================================================ */
+let _appliedCoupon = null; // { code, discount_percent, final_amount, original_amount, currency }
+
+/* ============================================================
    Checkout: Dynamic Order Summary
    ============================================================ */
 function updateOrderSummary() {
@@ -488,22 +493,41 @@ function updateOrderSummary() {
   const basePrice  = product.price;
   const method     = document.querySelector('input[name="paymentMethod"]:checked')?.value || 'pix';
   const isBinance  = method === 'binance';
-  const discount   = isBinance ? Math.round(basePrice * 0.07 * 100) / 100 : 0;
-  const finalPrice = Math.round((basePrice - discount) * 100) / 100;
+  const binanceDisc = isBinance ? Math.round(basePrice * 0.07 * 100) / 100 : 0;
+  const priceAfterBinance = Math.round((basePrice - binanceDisc) * 100) / 100;
 
-  const nameEl     = document.getElementById('orderItemName');
-  const priceEl    = document.getElementById('orderItemPrice');
-  const subtotalEl = document.getElementById('orderSubtotal');
-  const discountEl = document.getElementById('orderDiscount');
-  const totalEl    = document.getElementById('orderTotal');
-  const discRowEl  = document.getElementById('orderDiscountRow');
+  // Apply coupon on top (if active for this product)
+  const couponDisc = _appliedCoupon ? Math.round(priceAfterBinance * (_appliedCoupon.discount_percent / 100) * 100) / 100 : 0;
+  const finalPrice = Math.round((priceAfterBinance - couponDisc) * 100) / 100;
 
-  if (nameEl)     nameEl.textContent    = product.emoji + ' ' + t.name;
-  if (priceEl)    priceEl.textContent   = kdFormatPrice(basePrice);
+  const nameEl        = document.getElementById('orderItemName');
+  const priceEl       = document.getElementById('orderItemPrice');
+  const subtotalEl    = document.getElementById('orderSubtotal');
+  const discountEl    = document.getElementById('orderDiscount');
+  const totalEl       = document.getElementById('orderTotal');
+  const discRowEl     = document.getElementById('orderDiscountRow');
+  const couponRowEl   = document.getElementById('orderCouponRow');
+  const couponDiscEl  = document.getElementById('orderCouponDiscount');
+  const couponLabelEl = document.getElementById('orderCouponLabel');
+
+  if (nameEl)     nameEl.textContent     = product.emoji + ' ' + t.name;
+  if (priceEl)    priceEl.textContent    = kdFormatPrice(basePrice);
   if (subtotalEl) subtotalEl.textContent = kdFormatPrice(basePrice);
-  if (discRowEl)  discRowEl.style.display = isBinance ? 'flex' : 'none';
-  if (discountEl) discountEl.textContent  = isBinance ? '-' + kdFormatPrice(discount) : '';
-  if (totalEl)    totalEl.textContent    = kdFormatPrice(finalPrice);
+
+  if (discRowEl)  discRowEl.style.display  = isBinance ? 'flex' : 'none';
+  if (discountEl) discountEl.textContent   = isBinance ? '-' + kdFormatPrice(binanceDisc) : '';
+
+  if (couponRowEl && couponDiscEl) {
+    if (_appliedCoupon && couponDisc > 0) {
+      couponRowEl.style.display = 'flex';
+      if (couponLabelEl) couponLabelEl.textContent = '🏷️ Cupom ' + _appliedCoupon.code;
+      couponDiscEl.textContent = '-' + kdFormatPrice(couponDisc);
+    } else {
+      couponRowEl.style.display = 'none';
+    }
+  }
+
+  if (totalEl) totalEl.textContent = kdFormatPrice(finalPrice);
 }
 
 /* ============================================================
@@ -1782,7 +1806,15 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ---- Checkout: product & payment change listeners ---- */
   const productSelectEl = document.getElementById('product');
   if (productSelectEl) {
-    productSelectEl.addEventListener('change', updateOrderSummary);
+    productSelectEl.addEventListener('change', () => {
+      // Reset coupon when product changes
+      _appliedCoupon = null;
+      const couponMsg = document.getElementById('couponMsg');
+      if (couponMsg) couponMsg.style.display = 'none';
+      const couponInput = document.getElementById('couponCode');
+      if (couponInput) couponInput.value = '';
+      updateOrderSummary();
+    });
   }
   document.querySelectorAll('input[name="paymentMethod"]').forEach(radio => {
     radio.addEventListener('change', () => {
@@ -1793,6 +1825,59 @@ document.addEventListener('DOMContentLoaded', () => {
   if (productSelectEl) {
     updateOrderSummary();
     kdToggleCpfField();
+  }
+
+  /* ---- Apply Coupon button ---- */
+  const applyCouponBtn = document.getElementById('applyCouponBtn');
+  if (applyCouponBtn) {
+    applyCouponBtn.addEventListener('click', async () => {
+      const code      = (document.getElementById('couponCode')?.value || '').trim().toUpperCase();
+      const productId = document.getElementById('product')?.value || '';
+      const method    = document.querySelector('input[name="paymentMethod"]:checked')?.value || 'pix';
+      const msgEl     = document.getElementById('couponMsg');
+
+      if (!code) {
+        if (msgEl) { msgEl.textContent = 'Digite o código do cupom.'; msgEl.style.cssText = 'display:block;margin-top:.5rem;font-size:.82rem;padding:.5rem .75rem;border-radius:4px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.08);color:#f87171;'; }
+        return;
+      }
+      if (!productId) {
+        if (msgEl) { msgEl.textContent = 'Selecione um produto antes de aplicar o cupom.'; msgEl.style.cssText = 'display:block;margin-top:.5rem;font-size:.82rem;padding:.5rem .75rem;border-radius:4px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.08);color:#f87171;'; }
+        return;
+      }
+
+      applyCouponBtn.disabled    = true;
+      applyCouponBtn.textContent = '⏳';
+
+      try {
+        const resp = await fetch('/api/validate-coupon', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ coupon_code: code, product_id: productId, payment_method: method }),
+        });
+        const data = await resp.json();
+
+        if (data.valid) {
+          _appliedCoupon = { code: data.coupon_code, discount_percent: data.discount_percent };
+          if (msgEl) {
+            msgEl.textContent = `✓ ${data.message} (${data.discount_percent}% off)`;
+            msgEl.style.cssText = 'display:block;margin-top:.5rem;font-size:.82rem;padding:.5rem .75rem;border-radius:4px;border:1px solid rgba(74,222,128,.3);background:rgba(74,222,128,.07);color:#4ade80;';
+          }
+        } else {
+          _appliedCoupon = null;
+          if (msgEl) {
+            msgEl.textContent = '✗ ' + (data.message || 'Cupom inválido.');
+            msgEl.style.cssText = 'display:block;margin-top:.5rem;font-size:.82rem;padding:.5rem .75rem;border-radius:4px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.08);color:#f87171;';
+          }
+        }
+        updateOrderSummary();
+      } catch {
+        if (msgEl) { msgEl.textContent = 'Erro ao validar cupom. Tente novamente.'; msgEl.style.display = 'block'; }
+        _appliedCoupon = null;
+      } finally {
+        applyCouponBtn.disabled    = false;
+        applyCouponBtn.textContent = 'Aplicar';
+      }
+    });
   }
 
   /* ---- CPF: exibir somente quando PIX selecionado ---- */
@@ -2057,7 +2142,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const resp = await fetch('/api/create-pix-order', {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ name, email, whatsapp, cpf, productId, productName, notes }),
+            body:    JSON.stringify({ name, email, whatsapp, cpf, productId, productName, notes, coupon_code: _appliedCoupon ? _appliedCoupon.code : undefined }),
           });
           let data;
           try { data = await resp.json(); } catch (_) { data = {}; }
@@ -2104,7 +2189,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const resp = await fetch('/api/create-manual-order', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ name, email, whatsapp, productId, productName, paymentMethod: method, notes }),
+          body:    JSON.stringify({ name, email, whatsapp, productId, productName, paymentMethod: method, notes, coupon_code: _appliedCoupon ? _appliedCoupon.code : undefined }),
         });
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || 'Erro ao registrar pedido.');

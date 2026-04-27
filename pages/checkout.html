@@ -154,6 +154,22 @@
             <label for="notes" data-i18n="checkout-notes-label">Notes (optional)</label>
             <textarea id="notes" name="notes" data-i18n-placeholder="checkout-notes-ph" placeholder="Any special requests or questions..." rows="3" style="resize:vertical;"></textarea>
           </div>
+
+          <!-- Cupom promocional -->
+          <div class="form-group" style="margin-top:1.1rem;">
+            <label for="couponCode" data-i18n="checkout-coupon-label">Cupom promocional (opcional)</label>
+            <div style="display:flex;gap:.5rem;">
+              <input type="text" id="couponCode" name="couponCode"
+                placeholder="PROMO10"
+                maxlength="50"
+                autocomplete="off"
+                style="flex:1;text-transform:uppercase;" />
+              <button type="button" id="applyCouponBtn" class="btn btn-outline btn-sm" style="white-space:nowrap;" data-i18n="checkout-coupon-apply">
+                Aplicar
+              </button>
+            </div>
+            <div id="couponMsg" style="display:none;margin-top:.5rem;font-size:.82rem;padding:.5rem .75rem;border-radius:var(--radius);border:1px solid;"></div>
+          </div>
         </div>
 
         <!-- Payment -->
@@ -305,8 +321,12 @@
           <span id="orderSubtotal">—</span>
         </div>
         <div id="orderDiscountRow" class="order-item" style="display:none;justify-content:space-between;padding:.5rem 0;font-size:.85rem;color:var(--text-muted);">
-          <span data-i18n="checkout-discount">Desconto Binance</span>
+          <span id="orderDiscountLabel" data-i18n="checkout-discount">Desconto</span>
           <span id="orderDiscount" style="color:#4ade80;"></span>
+        </div>
+        <div id="orderCouponRow" class="order-item" style="display:none;justify-content:space-between;padding:.5rem 0;font-size:.85rem;color:var(--text-muted);">
+          <span id="orderCouponLabel">🏷️ Cupom</span>
+          <span id="orderCouponDiscount" style="color:#4ade80;"></span>
         </div>
 
         <div class="order-total">
