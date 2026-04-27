@@ -1666,6 +1666,13 @@ function setLang(lang, persist = true) {
 function kdLogout() {
   localStorage.removeItem('kd_isLoggedIn');
   localStorage.removeItem('kd_userEmail');
+  // Apaga a sessão do Supabase Auth para que login.html não faça auto-redirect
+  // após logout. O SDK armazena a sessão como sb-{projectRef}-auth-token.
+  try {
+    Object.keys(localStorage)
+      .filter(function (k) { return k.startsWith('sb-') && k.includes('-auth-token'); })
+      .forEach(function (k) { localStorage.removeItem(k); });
+  } catch (e) { /* falha silenciosamente */ }
   const base = window.location.pathname.includes('/pages/') ? '../' : '';
   window.location.href = base + 'index.html';
 }

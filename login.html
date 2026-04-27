@@ -129,7 +129,11 @@
     
     (async () => {
       const { data: { session } } = await sb.auth.getSession();
-      if (session) window.location.href = 'pages/products.html';
+      if (session) {
+        localStorage.setItem('kd_isLoggedIn', 'true');
+        localStorage.setItem('kd_userEmail', session.user?.email || '');
+        window.location.href = 'pages/products.html';
+      }
     })();
     
     function switchTab(tab) {
@@ -171,9 +175,13 @@
       const btn = document.getElementById('btnLogin');
       if (!email || !pass) return showError('Preencha email e senha.');
       btn.disabled = true; btn.textContent = '⏳ Entrando...';
-      const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+      const { data: loginData, error } = await sb.auth.signInWithPassword({ email, password: pass });
       if (error) { showError(error.message.includes('Invalid') ? 'Email ou senha incorretos.' : error.message); btn.disabled = false; btn.textContent = 'Entrar →'; }
-      else { window.location.href = 'pages/products.html'; }
+      else {
+        localStorage.setItem('kd_isLoggedIn', 'true');
+        localStorage.setItem('kd_userEmail', loginData?.user?.email || email);
+        window.location.href = 'pages/products.html';
+      }
     });
     
     document.getElementById('formRegister').addEventListener('submit', async function(e) {
@@ -209,7 +217,20 @@
     }
     setupPwToggle('pwToggle', 'loginPassword');
     setupPwToggle('pwToggleReg', 'regPassword');
-    sb.auth.onAuthStateChange((ev, ses) => { if (ev==='SIGNED_IN' && ses) window.location.href = 'pages/products.html'; });
+    sb.auth.onAuthStateChange((ev, ses) => {
+      if (ev === 'SIGNED_IN' && ses) {
+        localStorage.setItem('kd_isLoggedIn', 'true');
+        localStorage.setItem('kd_userEmail', ses.user?.email || '');
+        // Só redireciona se ainda estiver na página de login
+        if (window.location.pathname.includes('login')) {
+          window.location.href = 'pages/products.html';
+        }
+      }
+      if (ev === 'SIGNED_OUT') {
+        localStorage.removeItem('kd_isLoggedIn');
+        localStorage.removeItem('kd_userEmail');
+      }
+    });
   </script>
 </body>
 </html>

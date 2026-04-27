@@ -2,7 +2,29 @@
 <html lang="pt">
 <head>
   <meta charset="UTF-8" />
-
+  <script>
+    // Ponte Supabase → kd_isLoggedIn
+    // Roda ANTES de qualquer redirect guard. Lê a sessão Supabase diretamente do
+    // localStorage (sem carregar o SDK) e sincroniza a flag usada pelo site.
+    // Necessário para o fluxo Google OAuth, que redireciona direto para esta página.
+    (function () {
+      try {
+        var key = Object.keys(localStorage).find(function (k) {
+          return k.startsWith('sb-') && k.endsWith('-auth-token');
+        });
+        if (key) {
+          var raw = localStorage.getItem(key);
+          var data = raw ? JSON.parse(raw) : null;
+          if (data && (data.access_token || data.refresh_token)) {
+            localStorage.setItem('kd_isLoggedIn', 'true');
+            if (!localStorage.getItem('kd_userEmail') && data.user && data.user.email) {
+              localStorage.setItem('kd_userEmail', data.user.email);
+            }
+          }
+        }
+      } catch (e) { /* falha silenciosamente */ }
+    }());
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Produtos — KitsDigitalia</title>
   <meta name="description" content="Explore o catálogo privado de ferramentas premium, streaming e serviços digitais da KitsDigitalia." />
