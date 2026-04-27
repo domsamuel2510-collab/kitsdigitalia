@@ -26,6 +26,7 @@ const { validateEmail,
         validateRequiredString,
         firstError }             = require('./_validate');
 const { sendEmail }              = require('./_email');
+const { resolveReseller }        = require('./_reseller');
 
 const EUR_TO_BRL = 5.99;
 
@@ -88,7 +89,7 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST')   return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { name, email, whatsapp, cpf, productId, productName, notes, coupon_code } = req.body || {};
+    const { name, email, whatsapp, cpf, productId, productName, notes, coupon_code, reseller_code } = req.body || {};
 
     // 1. Validação de inputs ─────────────────────────────────────────────────
     const inputError = firstError(
@@ -129,6 +130,11 @@ module.exports = async function handler(req, res) {
       await resolveCoupon(db, coupon_code, priceEUR * EUR_TO_BRL);
     const amount = Math.round((originalAmount - discountAmount) * 100) / 100;
 
+    // 4.5 Resolve revendedor (opcional — só aceita se aprovado no DB) ──────────
+    const reseller           = await resolveReseller(db, reseller_code);
+    const commissionPct      = reseller ? reseller.commission_percent : 0;
+    const commissionAmount   = reseller ? Math.round(amount * (commissionPct / 100) * 100) / 100 : 0;
+
     // 5. Insert com retry em colisão de order_id ──────────────────────────────
     const { orderId, error: dbErr } = await insertOrderWithRetry(db, (id) => ({
       order_id:           id,
@@ -148,6 +154,13 @@ module.exports = async function handler(req, res) {
       fulfillment_status: 'aguardando_pagamento',
       currency:           'BRL',
       notes:              notes ? String(notes).trim().slice(0, 1000) : null,
+      // Revendedor (nulo quando não veio ref válido)
+      reseller_id:        reseller ? reseller.id   : null,
+      reseller_code:      reseller ? reseller_code.trim().toLowerCase() : null,
+      reseller_name:      reseller ? reseller.name : null,
+      commission_percent: reseller ? commissionPct : null,
+      commission_amount:  reseller ? commissionAmount : null,
+      commission_status:  reseller ? 'pending' : null,
     }));
 
     if (dbErr) {
@@ -155,8 +168,9 @@ module.exports = async function handler(req, res) {
       return res.status(500).json({ error: 'Erro no banco de dados', details: dbErr.message });
     }
 
-    const couponInfo = resolvedCode ? ` | cupom=${resolvedCode} ${discountPercent}%` : '';
-    console.log(`[create-pix-order] pedido criado | orderId=${orderId} | product=${productId} | amount=${amount}${couponInfo}`);
+    const couponInfo   = resolvedCode ? ` | cupom=${resolvedCode} ${discountPercent}%` : '';
+    const resellerInfo = reseller ? ` | ref=${reseller_code.trim().toLowerCase()} commission=${commissionPct}%` : '';
+    console.log(`[create-pix-order] pedido criado | orderId=${orderId} | product=${productId} | amount=${amount}${couponInfo}${resellerInfo}`);
 
     // 6. Email (fire-and-forget) ──────────────────────────────────────────────
     const notifyEmail = (process.env.ADMIN_NOTIFICATION_EMAIL || 'pedidos@kitsdigitalia.com').trim();

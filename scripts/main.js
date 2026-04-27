@@ -1753,7 +1753,34 @@ function kdCaptureRef() {
   const ref = params.get('ref');
   if (ref) {
     const normalized = ref.toLowerCase().trim().replace(/\s+/g, '');
-    if (normalized) localStorage.setItem('kd_ref', normalized);
+    if (normalized) {
+      // kd_ref — usado nas mensagens WhatsApp (legado)
+      localStorage.setItem('kd_ref', normalized);
+
+      // kd_reseller — usado para atribuição de pedidos ao revendedor no DB (30 dias)
+      if (/^[a-z0-9_-]{1,60}$/.test(normalized)) {
+        localStorage.setItem('kd_reseller', JSON.stringify({
+          code:    normalized,
+          expires: Date.now() + 30 * 24 * 60 * 60 * 1000,
+        }));
+      }
+    }
+  }
+}
+
+/** Retorna o reseller_code salvo no navegador, ou null se ausente/expirado. */
+function kdGetResellerCode() {
+  try {
+    const raw = localStorage.getItem('kd_reseller');
+    if (!raw) return null;
+    const { code, expires } = JSON.parse(raw);
+    if (!code || Date.now() > expires) {
+      localStorage.removeItem('kd_reseller');
+      return null;
+    }
+    return code;
+  } catch {
+    return null;
   }
 }
 
@@ -2181,7 +2208,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const resp = await fetch('/api/create-pix-order', {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ name, email, whatsapp, cpf, productId, productName, notes, coupon_code: _appliedCoupon ? _appliedCoupon.code : undefined }),
+            body:    JSON.stringify({ name, email, whatsapp, cpf, productId, productName, notes, coupon_code: _appliedCoupon ? _appliedCoupon.code : undefined, reseller_code: kdGetResellerCode() }),
           });
           let data;
           try { data = await resp.json(); } catch (_) { data = {}; }
@@ -2228,7 +2255,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const resp = await fetch('/api/create-manual-order', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ name, email, whatsapp, productId, productName, paymentMethod: method, notes, coupon_code: _appliedCoupon ? _appliedCoupon.code : undefined }),
+          body:    JSON.stringify({ name, email, whatsapp, productId, productName, paymentMethod: method, notes, coupon_code: _appliedCoupon ? _appliedCoupon.code : undefined, reseller_code: kdGetResellerCode() }),
         });
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || 'Erro ao registrar pedido.');

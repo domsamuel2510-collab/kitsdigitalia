@@ -385,6 +385,28 @@ async function actionUpdateProduct(req, res) {
 
 // ── Resellers ─────────────────────────────────────────────────────────────────
 
+/**
+ * Gera um reseller_code único a partir do nome.
+ * Ex: "Pedro Arthur Paixão" → "pedro-arthur-paixao"
+ * Se já existir, adiciona sufixo numérico: "pedro-arthur-paixao-2", etc.
+ */
+function generateResellerCode(name, existingCodesSet) {
+  let base = String(name || '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '') // remove acentos
+    .replace(/[^a-z0-9\s]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .slice(0, 40);
+
+  if (!base) base = 'revendedor';
+  if (!existingCodesSet.has(base)) return base;
+
+  let i = 2;
+  while (existingCodesSet.has(`${base}-${i}`) && i < 1000) i++;
+  return `${base}-${i}`;
+}
+
 // GET ?action=getResellers
 async function actionGetResellers(req, res) {
   const admin = requireAdmin(req, res);
@@ -409,10 +431,33 @@ async function actionGetResellers(req, res) {
     return res.status(500).json({ error: 'Erro ao listar revendedores.' });
   }
 
-  return res.status(200).json({ resellers: data });
+  // Conta pedidos por reseller_code (apenas para aprovados com código)
+  const approvedCodes = (data || []).filter(r => r.reseller_code).map(r => r.reseller_code);
+  const orderCounts   = {};
+
+  if (approvedCodes.length > 0) {
+    const { data: orders } = await db
+      .from('orders')
+      .select('reseller_code')
+      .in('reseller_code', approvedCodes);
+
+    (orders || []).forEach(o => {
+      if (o.reseller_code) {
+        orderCounts[o.reseller_code] = (orderCounts[o.reseller_code] || 0) + 1;
+      }
+    });
+  }
+
+  const resellers = (data || []).map(r => ({
+    ...r,
+    order_count: orderCounts[r.reseller_code] || 0,
+  }));
+
+  return res.status(200).json({ resellers });
 }
 
 // POST ?action=updateReseller
+// Handles: status change (with auto-code generation on approve) + commission_percent edit
 async function actionUpdateReseller(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
@@ -420,28 +465,75 @@ async function actionUpdateReseller(req, res) {
   if (!admin) return;
 
   const VALID_STATUSES = ['new', 'contacted', 'approved', 'rejected'];
-  const { id, status } = req.body || {};
+  const { id, status, commission_percent } = req.body || {};
 
-  if (!id)     return res.status(400).json({ error: 'ID é obrigatório.' });
-  if (!status) return res.status(400).json({ error: 'Status é obrigatório.' });
-  if (!VALID_STATUSES.includes(status)) {
-    return res.status(400).json({ error: `Status inválido. Use: ${VALID_STATUSES.join(', ')}.` });
+  if (!id) return res.status(400).json({ error: 'ID é obrigatório.' });
+
+  const db      = getDb();
+  const updates = {};
+
+  // ── Status change ─────────────────────────────────────────────────────────
+  if (status !== undefined) {
+    if (!VALID_STATUSES.includes(status)) {
+      return res.status(400).json({ error: `Status inválido. Use: ${VALID_STATUSES.join(', ')}.` });
+    }
+    updates.status = status;
+
+    // Ao aprovar: gera reseller_code (se ainda não tiver) e marca approved_at
+    if (status === 'approved') {
+      const { data: existing, error: fetchErr } = await db
+        .from('reseller_applications')
+        .select('name, reseller_code')
+        .eq('id', id)
+        .single();
+
+      if (fetchErr || !existing) {
+        return res.status(404).json({ error: 'Revendedor não encontrado.' });
+      }
+
+      updates.approved_at = new Date().toISOString();
+
+      if (!existing.reseller_code) {
+        // Busca todos os códigos já usados para garantir unicidade
+        const { data: allRows } = await db
+          .from('reseller_applications')
+          .select('reseller_code')
+          .not('reseller_code', 'is', null);
+
+        const existingCodesSet = new Set(
+          (allRows || []).map(r => r.reseller_code).filter(Boolean)
+        );
+        updates.reseller_code = generateResellerCode(existing.name, existingCodesSet);
+      }
+    }
   }
 
-  const db = getDb();
+  // ── Commission percent update ──────────────────────────────────────────────
+  if (commission_percent !== undefined) {
+    const pct = Number(commission_percent);
+    if (!Number.isFinite(pct) || pct < 0 || pct > 100) {
+      return res.status(400).json({ error: 'Comissão deve ser entre 0% e 100%.' });
+    }
+    updates.commission_percent = pct;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ error: 'Nenhum campo para atualizar.' });
+  }
+
   const { data, error } = await db
     .from('reseller_applications')
-    .update({ status })
+    .update(updates)
     .eq('id', id)
     .select()
     .single();
 
   if (error) {
     console.error('[admin] updateReseller:', error.message);
-    return res.status(500).json({ error: 'Erro ao atualizar status.' });
+    return res.status(500).json({ error: 'Erro ao atualizar revendedor.' });
   }
 
-  console.log(`[admin] updateReseller | id=${id} | status=${status} | admin=${admin.username}`);
+  console.log(`[admin] updateReseller | id=${id} | fields=${Object.keys(updates).join(',')} | admin=${admin.username}`);
   return res.status(200).json({ reseller: data });
 }
 

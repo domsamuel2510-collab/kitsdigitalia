@@ -21,6 +21,7 @@ const { insertOrderWithRetry }   = require('./_order-id');
 const { validateEmail,
         validateRequiredString,
         firstError }             = require('./_validate');
+const { resolveReseller }        = require('./_reseller');
 
 const BINANCE_UID          = '1229674211';
 const BINANCE_DISCOUNT_PCT = 0.07; // 7 %
@@ -80,7 +81,7 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST')   return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { name, email, whatsapp, productId, productName, paymentMethod, notes, coupon_code } = req.body || {};
+    const { name, email, whatsapp, productId, productName, paymentMethod, notes, coupon_code, reseller_code } = req.body || {};
 
     // 1. Validação de inputs ─────────────────────────────────────────────────
     const inputError = firstError(
@@ -126,6 +127,11 @@ module.exports = async function handler(req, res) {
     const originalAmount = priceAfterBinance; // antes do cupom
     const amount         = Math.round((priceAfterBinance - discountAmount) * 100) / 100;
 
+    // 4.5 Resolve revendedor (opcional — só aceita se aprovado no DB) ──────────
+    const reseller         = await resolveReseller(db, reseller_code);
+    const commissionPct    = reseller ? reseller.commission_percent : 0;
+    const commissionAmount = reseller ? Math.round(amount * (commissionPct / 100) * 100) / 100 : 0;
+
     // 5. Insert com retry em colisão de order_id ──────────────────────────────
     const { orderId, error: dbErr } = await insertOrderWithRetry(db, (id) => ({
       order_id:           id,
@@ -144,6 +150,13 @@ module.exports = async function handler(req, res) {
       fulfillment_status: 'aguardando_pagamento',
       currency:           'EUR',
       notes:              notes ? String(notes).trim().slice(0, 1000) : null,
+      // Revendedor (nulo quando não veio ref válido)
+      reseller_id:        reseller ? reseller.id   : null,
+      reseller_code:      reseller ? reseller_code.trim().toLowerCase() : null,
+      reseller_name:      reseller ? reseller.name : null,
+      commission_percent: reseller ? commissionPct : null,
+      commission_amount:  reseller ? commissionAmount : null,
+      commission_status:  reseller ? 'pending' : null,
     }));
 
     if (dbErr) {
@@ -151,8 +164,9 @@ module.exports = async function handler(req, res) {
       return res.status(500).json({ error: 'Erro ao registrar pedido.', details: dbErr.message });
     }
 
-    const couponInfo = resolvedCode ? ` | cupom=${resolvedCode} ${discountPercent}%` : '';
-    console.log(`[create-manual-order] pedido criado | orderId=${orderId} | product=${productId} | method=${paymentMethod} | amount=${amount}${couponInfo}`);
+    const couponInfo   = resolvedCode ? ` | cupom=${resolvedCode} ${discountPercent}%` : '';
+    const resellerInfo = reseller ? ` | ref=${reseller_code.trim().toLowerCase()} commission=${commissionPct}%` : '';
+    console.log(`[create-manual-order] pedido criado | orderId=${orderId} | product=${productId} | method=${paymentMethod} | amount=${amount}${couponInfo}${resellerInfo}`);
 
     // 6. Resposta ─────────────────────────────────────────────────────────────
     return res.status(200).json({

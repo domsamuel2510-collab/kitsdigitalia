@@ -331,7 +331,7 @@ const API = {
   productUpdate:   '/api/admin?action=updateProduct',
   syncCatalog:     '/api/admin?action=syncCatalogProducts',
   resellers:       '/api/admin?action=getResellers',
-  resellerUpdate:  '/api/admin?action=updateReseller',
+  resellerUpdate:  '/api/admin?action=updateReseller',  // handles status + commission_percent
 };
 
 // ── Toast ────────────────────────────────────────────────────────────────────
@@ -762,38 +762,71 @@ function renderResellerTable(list) {
     rejected:  '<span class="badge badge-red">❌ Rejeitado</span>',
   };
 
-  wrap.innerHTML = `
-    <table class="admin-table">
-      <thead>
-        <tr>
-          <th>Nome</th><th>Email</th><th>WhatsApp</th><th>País</th><th>Mensagem</th><th>Data</th><th>Status</th><th>Ação</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${list.map(r => `
-          <tr>
-            <td><strong style="color:var(--white);">${esc(r.name)}</strong></td>
-            <td><a href="mailto:${esc(r.email)}" style="color:var(--orange);font-size:.82rem;">${esc(r.email)}</a></td>
-            <td style="font-size:.82rem;">${esc(r.whatsapp)}</td>
-            <td style="font-size:.82rem;">${esc(r.country)}</td>
-            <td style="font-size:.78rem;color:var(--text-muted);max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(r.message || '')}">
-              ${r.message ? esc(r.message.slice(0, 60)) + (r.message.length > 60 ? '…' : '') : '—'}
-            </td>
-            <td style="color:var(--text-muted);font-size:.78rem;">${fmtDate(r.created_at)}</td>
-            <td>${statusBadge[r.status] || r.status}</td>
-            <td>
-              <select class="btn-xs" onchange="updateResellerStatus('${r.id}', this.value)" style="padding:.3rem .5rem;background:var(--bg3);border:1px solid var(--border);color:var(--text);">
-                <option value="new"       ${r.status==='new'?'selected':''}>🆕 Novo</option>
-                <option value="contacted" ${r.status==='contacted'?'selected':''}>📞 Contactado</option>
-                <option value="approved"  ${r.status==='approved'?'selected':''}>✅ Aprovado</option>
-                <option value="rejected"  ${r.status==='rejected'?'selected':''}>❌ Rejeitado</option>
-              </select>
-            </td>
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>
-  `;
+  const origin = window.location.origin.replace('/pages', '');
+
+  wrap.innerHTML = list.map(r => {
+    const link       = r.reseller_code ? `${origin}/?ref=${r.reseller_code}` : null;
+    const isApproved = r.status === 'approved';
+    const commission = r.commission_percent != null ? Number(r.commission_percent) : 10;
+
+    return `
+    <div class="admin-card" style="margin-bottom:1rem;padding:1.25rem 1.5rem;">
+      <!-- Row 1: Nome + Status + Ação de status -->
+      <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin-bottom:.75rem;">
+        <strong style="color:var(--white);font-size:.95rem;">${esc(r.name)}</strong>
+        ${statusBadge[r.status] || r.status}
+        ${r.order_count > 0 ? `<span class="badge badge-blue">🛒 ${r.order_count} pedido${r.order_count !== 1 ? 's' : ''}</span>` : ''}
+        <div style="margin-left:auto;display:flex;align-items:center;gap:.4rem;">
+          <select class="btn-xs" onchange="updateResellerStatus('${r.id}', this.value)"
+            style="padding:.3rem .5rem;background:var(--bg3);border:1px solid var(--border);color:var(--text);">
+            <option value="new"       ${r.status==='new'?'selected':''}>🆕 Novo</option>
+            <option value="contacted" ${r.status==='contacted'?'selected':''}>📞 Contactado</option>
+            <option value="approved"  ${r.status==='approved'?'selected':''}>✅ Aprovar</option>
+            <option value="rejected"  ${r.status==='rejected'?'selected':''}>❌ Rejeitar</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Row 2: Contato -->
+      <div style="display:flex;gap:1.5rem;flex-wrap:wrap;font-size:.82rem;color:var(--text-muted);margin-bottom:.75rem;">
+        <span>📧 <a href="mailto:${esc(r.email)}" style="color:var(--orange);">${esc(r.email)}</a></span>
+        <span>📱 ${esc(r.whatsapp)}</span>
+        <span>🌍 ${esc(r.country)}</span>
+        <span style="color:var(--text-muted);font-size:.78rem;">📅 ${fmtDate(r.created_at)}</span>
+      </div>
+
+      ${r.message ? `
+      <div style="font-size:.78rem;color:var(--text-muted);background:rgba(255,255,255,.03);border-radius:6px;padding:.5rem .75rem;margin-bottom:.75rem;border-left:2px solid var(--border);">
+        ${esc(r.message.slice(0, 200))}${r.message.length > 200 ? '…' : ''}
+      </div>` : ''}
+
+      ${isApproved ? `
+      <!-- Link único -->
+      <div style="background:rgba(74,222,128,.05);border:1px solid rgba(74,222,128,.2);border-radius:var(--radius);padding:.85rem 1rem;margin-bottom:.75rem;">
+        <div style="font-size:.75rem;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.4rem;">🔗 Link de Revendedor</div>
+        <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
+          <code style="flex:1;font-size:.8rem;color:var(--text);background:rgba(255,255,255,.04);padding:.3rem .6rem;border-radius:5px;word-break:break-all;">${esc(link)}</code>
+          <button class="btn-xs success" onclick="copyResellerLink('${esc(link)}', this)">📋 Copiar</button>
+        </div>
+        ${r.approved_at ? `<div style="font-size:.73rem;color:var(--text-muted);margin-top:.4rem;">Aprovado em ${fmtDate(r.approved_at)}</div>` : ''}
+      </div>
+
+      <!-- Comissão -->
+      <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;font-size:.82rem;">
+        <span style="color:var(--text-muted);">💰 Comissão:</span>
+        <div style="display:flex;align-items:center;gap:.4rem;">
+          <input type="number" min="0" max="100" step="0.5"
+            value="${commission}"
+            id="commission-${r.id}"
+            style="width:70px;padding:.25rem .45rem;font-size:.82rem;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--white);text-align:center;"
+          />
+          <span style="color:var(--text-muted);">%</span>
+          <button class="btn-xs" onclick="saveResellerCommission('${r.id}')">Salvar</button>
+        </div>
+      </div>
+      ` : ''}
+    </div>`;
+  }).join('');
 }
 
 async function updateResellerStatus(id, status) {
@@ -804,9 +837,51 @@ async function updateResellerStatus(id, status) {
   });
   const d = await r.json();
   if (!r.ok) { toast(d.error || 'Erro ao atualizar.', 'err'); return; }
-  toast(`Status atualizado: ${status}.`);
+  const msg = status === 'approved' && d.reseller && d.reseller.reseller_code
+    ? `✅ Aprovado! Código: ${d.reseller.reseller_code}`
+    : `Status atualizado: ${status}.`;
+  toast(msg);
   await loadResellers();
   await loadDashboard();
+}
+
+async function saveResellerCommission(id) {
+  const input = document.getElementById(`commission-${id}`);
+  if (!input) return;
+  const pct = Number(input.value);
+  if (!Number.isFinite(pct) || pct < 0 || pct > 100) {
+    toast('Comissão deve ser entre 0% e 100%.', 'err');
+    return;
+  }
+  const r = await fetch(API.resellerUpdate, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, commission_percent: pct }),
+  });
+  const d = await r.json();
+  if (!r.ok) { toast(d.error || 'Erro ao salvar comissão.', 'err'); return; }
+  toast(`💰 Comissão salva: ${pct}%`);
+}
+
+function copyResellerLink(link, btn) {
+  navigator.clipboard.writeText(link).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = '✅ Copiado!';
+    setTimeout(() => { btn.textContent = orig; }, 2000);
+  }).catch(() => {
+    // Fallback para browsers sem clipboard API
+    const ta = document.createElement('textarea');
+    ta.value = link;
+    ta.style.position = 'fixed';
+    ta.style.opacity  = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    const orig = btn.textContent;
+    btn.textContent = '✅ Copiado!';
+    setTimeout(() => { btn.textContent = orig; }, 2000);
+  });
 }
 
 // Filtros de status
