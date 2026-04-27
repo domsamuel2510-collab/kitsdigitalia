@@ -3,7 +3,7 @@
 //
 // Registra pedidos IBAN e Binance no Supabase.
 // Entrega manual via WhatsApp — sem gateway de pagamento.
-// Catálogo de preços:  api/_catalog.js
+// Catálogo de preços:  api/_products.js (DB-first) + api/_catalog.js (fallback)
 // Geração de order_id: api/_order-id.js
 // Validação de inputs: api/_validate.js
 //
@@ -16,7 +16,7 @@
 'use strict';
 
 const { createClient }           = require('@supabase/supabase-js');
-const { PRODUCT_CATALOG }        = require('./_catalog');
+const { lookupProduct }          = require('./_products');
 const { insertOrderWithRetry }   = require('./_order-id');
 const { validateEmail,
         validateRequiredString,
@@ -47,6 +47,31 @@ function resolveSupabase() {
   return { db: createClient(url, key), configError: null };
 }
 
+/**
+ * Valida e aplica cupom. Retorna { discountPercent, discountAmount, resolvedCode } ou zeros.
+ */
+async function resolveCoupon(db, couponCode, basePrice) {
+  if (!couponCode || typeof couponCode !== 'string') {
+    return { discountPercent: 0, discountAmount: 0, resolvedCode: null };
+  }
+  const normalizedCode = couponCode.trim().toUpperCase();
+  if (!normalizedCode) return { discountPercent: 0, discountAmount: 0, resolvedCode: null };
+
+  const { data, error } = await db
+    .from('coupons')
+    .select('code, discount_percent, active')
+    .eq('code', normalizedCode)
+    .maybeSingle();
+
+  if (error || !data || !data.active) {
+    return { discountPercent: 0, discountAmount: 0, resolvedCode: null };
+  }
+
+  const pct    = Number(data.discount_percent);
+  const amount = Math.round(basePrice * (pct / 100) * 100) / 100;
+  return { discountPercent: pct, discountAmount: amount, resolvedCode: data.code };
+}
+
 // ── Handler principal ────────────────────────────────────────────────────────
 
 module.exports = async function handler(req, res) {
@@ -55,7 +80,7 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST')   return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { name, email, whatsapp, productId, productName, paymentMethod, notes } = req.body || {};
+    const { name, email, whatsapp, productId, productName, paymentMethod, notes, coupon_code } = req.body || {};
 
     // 1. Validação de inputs ─────────────────────────────────────────────────
     const inputError = firstError(
@@ -71,31 +96,37 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'Método de pagamento inválido.' });
     }
 
-    // 2. Validação de produto (servidor é a única fonte de verdade) ───────────
-    const item = PRODUCT_CATALOG[productId];
-    if (!item) return res.status(400).json({ error: 'Produto não encontrado.' });
-    if (item.soldOut) return res.status(400).json({ error: 'Produto esgotado. Escolha outro produto.' });
-
-    // productName é display-only (vem do frontend localizado).
-    // Preço e disponibilidade sempre do catálogo server-side.
-    const resolvedName = (productName && typeof productName === 'string')
-      ? productName.trim().slice(0, 200) || productId
-      : productId;
-
-    // Desconto Binance calculado exclusivamente no servidor
-    const basePrice = item.price;
-    const amount    = paymentMethod === 'binance'
-      ? Math.round(basePrice * (1 - BINANCE_DISCOUNT_PCT) * 100) / 100
-      : basePrice;
-
-    // 3. Supabase ─────────────────────────────────────────────────────────────
+    // 2. Supabase ─────────────────────────────────────────────────────────────
     const { db, configError } = resolveSupabase();
     if (configError) {
       console.error('[create-manual-order] config:', configError);
       return res.status(500).json({ error: 'Configuração inválida no servidor', details: configError });
     }
 
-    // 4. Insert com retry em colisão de order_id ──────────────────────────────
+    // 3. Validação de produto (DB-first, fallback em _catalog.js) ─────────────
+    const item = await lookupProduct(db, productId);
+    if (!item) return res.status(400).json({ error: 'Produto não encontrado.' });
+    if (item.soldOut) return res.status(400).json({ error: 'Produto esgotado. Escolha outro produto.' });
+
+    // productName é display-only (vem do frontend localizado).
+    const resolvedName = (productName && typeof productName === 'string')
+      ? productName.trim().slice(0, 200) || productId
+      : (item.name || productId);
+
+    // Desconto Binance calculado exclusivamente no servidor
+    const basePrice = item.price; // em EUR
+    const binanceDiscount = paymentMethod === 'binance'
+      ? Math.round(basePrice * BINANCE_DISCOUNT_PCT * 100) / 100
+      : 0;
+    const priceAfterBinance = Math.round((basePrice - binanceDiscount) * 100) / 100;
+
+    // 4. Resolve cupom (opcional, aplicado sobre o preço após desconto Binance) ─
+    const { discountPercent, discountAmount, resolvedCode } =
+      await resolveCoupon(db, coupon_code, priceAfterBinance);
+    const originalAmount = priceAfterBinance; // antes do cupom
+    const amount         = Math.round((priceAfterBinance - discountAmount) * 100) / 100;
+
+    // 5. Insert com retry em colisão de order_id ──────────────────────────────
     const { orderId, error: dbErr } = await insertOrderWithRetry(db, (id) => ({
       order_id:           id,
       customer_name:      name.trim(),
@@ -104,6 +135,9 @@ module.exports = async function handler(req, res) {
       product_id:         productId,
       product_name:       resolvedName,
       amount,
+      original_amount:    discountPercent > 0 ? originalAmount : null,
+      coupon_code:        resolvedCode,
+      discount_percent:   discountPercent > 0 ? discountPercent : null,
       payment_method:     paymentMethod,
       payment_provider:   'manual',
       payment_status:     'pending_manual',
@@ -117,14 +151,17 @@ module.exports = async function handler(req, res) {
       return res.status(500).json({ error: 'Erro ao registrar pedido.', details: dbErr.message });
     }
 
-    console.log(`[create-manual-order] pedido criado | orderId=${orderId} | product=${productId} | method=${paymentMethod} | amount=${amount}`);
+    const couponInfo = resolvedCode ? ` | cupom=${resolvedCode} ${discountPercent}%` : '';
+    console.log(`[create-manual-order] pedido criado | orderId=${orderId} | product=${productId} | method=${paymentMethod} | amount=${amount}${couponInfo}`);
 
-    // 5. Resposta ─────────────────────────────────────────────────────────────
+    // 6. Resposta ─────────────────────────────────────────────────────────────
     return res.status(200).json({
-      success:    true,
+      success:          true,
       orderId,
       amount,
-      binanceUid: paymentMethod === 'binance' ? BINANCE_UID : undefined,
+      original_amount:  discountPercent > 0 ? originalAmount : null,
+      discount_percent: discountPercent > 0 ? discountPercent : null,
+      binanceUid:       paymentMethod === 'binance' ? BINANCE_UID : undefined,
     });
 
   } catch (unexpectedErr) {
