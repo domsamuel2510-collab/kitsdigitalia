@@ -56,7 +56,9 @@ function setCorsHeaders(res) {
 
 function generateOrderId() {
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const rand = String(Math.floor(1000 + Math.random() * 9000));
+  // crypto.randomBytes(3) → 6 hex chars → 16 777 216 possibilidades/dia
+  // Elimina risco de colisão da versão anterior (Math.random, apenas 9000 valores)
+  const rand = require('crypto').randomBytes(3).toString('hex');
   return `PD-${date}-${rand}`;
 }
 
