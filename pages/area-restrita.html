@@ -804,11 +804,18 @@ function renderResellerTable(list) {
       <!-- Link único -->
       <div style="background:rgba(74,222,128,.05);border:1px solid rgba(74,222,128,.2);border-radius:var(--radius);padding:.85rem 1rem;margin-bottom:.75rem;">
         <div style="font-size:.75rem;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.4rem;">🔗 Link de Revendedor</div>
+        ${link ? `
         <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
           <code style="flex:1;font-size:.8rem;color:var(--text);background:rgba(255,255,255,.04);padding:.3rem .6rem;border-radius:5px;word-break:break-all;">${esc(link)}</code>
           <button class="btn-xs success" onclick="copyResellerLink('${esc(link)}', this)">📋 Copiar</button>
         </div>
         ${r.approved_at ? `<div style="font-size:.73rem;color:var(--text-muted);margin-top:.4rem;">Aprovado em ${fmtDate(r.approved_at)}</div>` : ''}
+        ` : `
+        <div style="display:flex;align-items:center;gap:.75rem;">
+          <span style="font-size:.82rem;color:var(--text-muted);">Código ainda não gerado.</span>
+          <button class="btn-xs success" onclick="generateResellerLink('${r.id}', this)">🔗 Gerar link</button>
+        </div>
+        `}
       </div>
 
       <!-- Comissão -->
@@ -837,12 +844,32 @@ async function updateResellerStatus(id, status) {
   });
   const d = await r.json();
   if (!r.ok) { toast(d.error || 'Erro ao atualizar.', 'err'); return; }
-  const msg = status === 'approved' && d.reseller && d.reseller.reseller_code
-    ? `✅ Aprovado! Código: ${d.reseller.reseller_code}`
+  const code = d.reseller && d.reseller.reseller_code;
+  const msg  = status === 'approved' && code
+    ? `✅ Aprovado! Código: ${code}`
     : `Status atualizado: ${status}.`;
   toast(msg);
   await loadResellers();
   await loadDashboard();
+}
+
+/** Gera link para revendedor aprovado que ainda não tem reseller_code */
+async function generateResellerLink(id, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Gerando...'; }
+  const r = await fetch(API.resellerUpdate, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, status: 'approved' }), // re-envia approved → gera código
+  });
+  const d = await r.json();
+  if (!r.ok) {
+    toast(d.error || 'Erro ao gerar link.', 'err');
+    if (btn) { btn.disabled = false; btn.textContent = '🔗 Gerar link'; }
+    return;
+  }
+  const code = d.reseller && d.reseller.reseller_code;
+  toast(code ? `✅ Link gerado: ${code}` : 'Revendedor atualizado.');
+  await loadResellers();
 }
 
 async function saveResellerCommission(id) {

@@ -387,17 +387,25 @@ async function actionUpdateProduct(req, res) {
 
 /**
  * Gera um reseller_code único a partir do nome.
- * Ex: "Pedro Arthur Paixão" → "pedro-arthur-paixao"
- * Se já existir, adiciona sufixo numérico: "pedro-arthur-paixao-2", etc.
+ * "Pedro Arthur Paixão" → "pedro-arthur-paixao"
+ * Se já existir, adiciona sufixo: "pedro-arthur-paixao-2", etc.
+ *
+ * Estratégia segura para acentos:
+ *   normalize('NFD') decompõe "ã" → "a" + combining-tilde (non-ASCII).
+ *   O replace /[^\x00-\x7F]/g remove TODOS os chars não-ASCII,
+ *   o que equivale a remover diacríticos sem precisar de regex com chars especiais.
  */
 function generateResellerCode(name, existingCodesSet) {
   let base = String(name || '')
     .toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '') // remove acentos
-    .replace(/[^a-z0-9\s]/g, '')
+    .normalize('NFD')
+    .replace(/[^\x00-\x7F]/g, '') // remove diacríticos (safe ASCII-only regex)
+    .replace(/[^a-z0-9\s-]/g, '') // remove chars que não são letras/números/espaço/hífen
     .trim()
-    .replace(/\s+/g, '-')
-    .slice(0, 40);
+    .replace(/\s+/g, '-')         // espaços → hífens
+    .replace(/-+/g, '-')          // hífens consecutivos → um único
+    .slice(0, 40)
+    .replace(/^-+|-+$/g, '');     // remove hífens nas bordas
 
   if (!base) base = 'revendedor';
   if (!existingCodesSet.has(base)) return base;
@@ -429,6 +437,36 @@ async function actionGetResellers(req, res) {
   if (error) {
     console.error('[admin] getResellers:', error.message);
     return res.status(500).json({ error: 'Erro ao listar revendedores.' });
+  }
+
+  // ── Backfill: aprovados sem reseller_code recebem um gerado automaticamente ─
+  const needsCode = (data || []).filter(r => r.status === 'approved' && !r.reseller_code);
+  if (needsCode.length > 0) {
+    // Coleta todos os códigos existentes para garantir unicidade
+    const { data: allCodeRows } = await db
+      .from('reseller_applications')
+      .select('reseller_code')
+      .not('reseller_code', 'is', null);
+
+    const existingCodesSet = new Set(
+      (allCodeRows || []).map(r => r.reseller_code).filter(Boolean)
+    );
+
+    for (const r of needsCode) {
+      const code = generateResellerCode(r.name, existingCodesSet);
+      existingCodesSet.add(code); // reserva o código para evitar colisões no mesmo lote
+      const { error: upErr } = await db
+        .from('reseller_applications')
+        .update({ reseller_code: code, approved_at: new Date().toISOString() })
+        .eq('id', r.id);
+      if (!upErr) {
+        r.reseller_code = code;
+        r.approved_at   = new Date().toISOString();
+        console.log(`[admin] getResellers | backfill reseller_code=${code} | id=${r.id}`);
+      } else {
+        console.error(`[admin] getResellers | backfill failed | id=${r.id} | ${upErr.message}`);
+      }
+    }
   }
 
   // Conta pedidos por reseller_code (apenas para aprovados com código)
